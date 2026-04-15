@@ -130,7 +130,7 @@ export function EditTransactionModal({ transaction, onClose, onSuccess }: EditTr
           </button>
         </div>
 
-        <div className="p-8 space-y-6">
+        <div className="p-4 sm:p-8 space-y-6">
           {errorMsg && (
             <div className="bg-danger/10 border border-danger/20 p-4 rounded-xl flex items-center gap-3 text-danger text-xs font-bold animate-in shake duration-300">
               <AlertCircle className="h-4 w-4 shrink-0" />

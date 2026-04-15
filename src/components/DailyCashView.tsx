@@ -56,14 +56,14 @@ export function DailyCashView({ transactions, barbers, refreshData }: DailyCashV
 
   return (
     <div className="space-y-8 pb-10">
-      <div className="flex items-center justify-between px-2">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-2">
         <div className="space-y-1">
           <h2 className="text-2xl font-bold text-white">Caixa do Dia</h2>
           <p className="text-sm text-muted">Controle total da sua gaveta física</p>
         </div>
         <button 
           onClick={() => setIsClosingModalOpen(true)}
-          className="flex items-center gap-2 rounded-xl bg-accent p-2.5 px-5 font-bold text-black hover:scale-[1.02] active:scale-95 transition-all shadow-[0_0_15px_rgba(20,255,214,0.3)]"
+          className="flex items-center justify-center gap-2 rounded-xl bg-accent p-3 sm:p-2.5 px-5 font-bold text-black hover:scale-[1.02] active:scale-95 transition-all shadow-[0_0_15px_rgba(20,255,214,0.3)] w-full sm:w-auto"
         >
           <History className="h-4 w-4" />
           Fechar Dia
@@ -147,7 +147,7 @@ export function DailyCashView({ transactions, barbers, refreshData }: DailyCashV
                 <Banknote className="h-4 w-4 text-black" />
               </div>
             </div>
-            <h3 className="text-4xl font-black text-white">{formatCurrency(finalCashBalance)}</h3>
+            <h3 className="text-2xl sm:text-4xl font-black text-white">{formatCurrency(finalCashBalance)}</h3>
             <p className="mt-4 text-[10px] text-muted italic">
               Cálculo: (Total - Pix - Cartão) - Saídas
             </p>

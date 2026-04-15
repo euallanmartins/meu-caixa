@@ -111,9 +111,9 @@ export function TransactionList({ transactions, onRefresh }: TransactionListProp
         <p className="text-[10px] text-muted uppercase tracking-widest">Movimentações do dia</p>
       </div>
 
-      <div className="relative p-6 px-4 sm:px-8">
+      <div className="relative p-4 sm:p-6 px-4 sm:px-8">
         {/* Timeline Vertical Line */}
-        <div className="absolute left-9 top-0 bottom-0 w-[2px] bg-gradient-to-b from-border/50 via-border to-transparent"></div>
+        <div className="absolute left-6 sm:left-9 top-0 bottom-0 w-[2px] bg-gradient-to-b from-border/50 via-border to-transparent"></div>
 
         <div className="space-y-8">
           {transactions.length === 0 ? (
@@ -122,9 +122,9 @@ export function TransactionList({ transactions, onRefresh }: TransactionListProp
             </div>
           ) : (
             transactions.map((tx) => (
-              <div key={tx.id} className="relative flex items-start gap-6 group">
+              <div key={tx.id} className="relative flex items-start gap-3 sm:gap-6 group">
                 {/* Connector Node */}
-                <div className={`relative z-10 mt-1 flex h-10 w-10 shrink-0 items-center justify-center rounded-xl shadow-lg transition-transform group-hover:scale-110 ${getBgColor(tx)}`}>
+                <div className={`relative z-10 mt-1 flex h-8 w-8 sm:h-10 sm:w-10 shrink-0 items-center justify-center rounded-xl shadow-lg transition-transform group-hover:scale-110 ${getBgColor(tx)}`}>
                   {getIcon(tx)}
                 </div>
 
@@ -158,7 +158,7 @@ export function TransactionList({ transactions, onRefresh }: TransactionListProp
                        {tx.comissao && (
                           <p className="text-[9px] text-muted-foreground italic">Comissão: {formatCurrency(tx.comissao)}</p>
                        )}
-                        <div className="mt-2 flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                        <div className="mt-2 flex items-center justify-start sm:justify-end gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                            <button 
                              onClick={() => setEditingTx(tx)}
                              className="p-1.5 rounded-lg bg-white/5 text-muted hover:text-white hover:bg-white/10 transition-colors"

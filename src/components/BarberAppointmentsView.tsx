@@ -110,7 +110,7 @@ export function BarberAppointmentsView({ barbers, transactions, loading, onRefre
       </div>
 
       {!selectedBarberId ? (
-        <div className="glass rounded-[2.5rem] p-20 flex flex-col items-center justify-center border-dashed border-border/50">
+        <div className="glass rounded-2xl sm:rounded-[2.5rem] p-10 sm:p-20 flex flex-col items-center justify-center border-dashed border-border/50">
            <div className="h-20 w-20 rounded-full bg-accent/10 flex items-center justify-center mb-6">
               <User className="h-10 w-10 text-accent/50" />
            </div>
@@ -194,7 +194,7 @@ export function BarberAppointmentsView({ barbers, transactions, loading, onRefre
                                      <p className={`text-sm font-black ${tx.type === 'income' ? 'text-white' : 'text-accent-gold'}`}>
                                         {formatCurrency(tx.amount)}
                                      </p>
-                                     <div className="mt-2 flex items-center justify-end gap-2 opacity-0 group-hover:opacity-100 transition-opacity">
+                                     <div className="mt-2 flex items-center justify-end gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                                         <button 
                                           onClick={() => setEditingTx(tx)}
                                           className="p-1.5 rounded-lg bg-white/5 text-muted hover:text-white transition-colors"

@@ -284,7 +284,7 @@ export function BarberCard({ barber, barbeariaId, onSuccess, onEdit }: BarberPro
           <div>
             <div className="flex items-center gap-2">
               <h3 className="font-bold text-lg text-white">{barber.nome}</h3>
-              <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
+              <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                 <button 
                   onClick={(e) => { e.stopPropagation(); onEdit(barber); }}
                   className="p-1.5 hover:bg-white/10 rounded-lg text-muted hover:text-white transition-colors"
@@ -304,16 +304,16 @@ export function BarberCard({ barber, barbeariaId, onSuccess, onEdit }: BarberPro
             </p>
           </div>
         </div>
-        <button className={`p-2 rounded-lg transition-colors ${isExpanded ? 'bg-accent text-black' : 'bg-white/5 text-muted hover:text-white'}`}>
-          <div className="flex items-center gap-2">
-            <span className="text-sm font-bold">{isExpanded ? 'Fechar' : '+ Lançar'}</span>
+        <button className={`p-2 rounded-lg transition-colors shrink-0 ${isExpanded ? 'bg-accent text-black' : 'bg-white/5 text-muted hover:text-white'}`}>
+          <div className="flex items-center gap-1 sm:gap-2">
+            <span className="text-xs sm:text-sm font-bold">{isExpanded ? 'Fechar' : '+ Lançar'}</span>
             {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}
           </div>
         </button>
       </div>
 
       {isExpanded && (
-        <div className="border-t border-border/50 bg-black/20 p-6 space-y-6 animate-in slide-in-from-top duration-300">
+        <div className="border-t border-border/50 bg-black/20 p-4 sm:p-6 space-y-6 animate-in slide-in-from-top duration-300">
           
           {/* Alternância de Modo (Serviço vs Produto) */}
           <div className="flex gap-2 p-1 bg-black/40 rounded-xl border border-white/5">
@@ -464,8 +464,8 @@ export function BarberCard({ barber, barbeariaId, onSuccess, onEdit }: BarberPro
                </div>
 
                {/* Real-time split visualization - Service */}
-               <div className="rounded-2xl bg-black/40 p-5 border border-white/5">
-                 <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+               <div className="rounded-2xl bg-black/40 p-4 sm:p-5 border border-white/5">
+                 <div className="grid grid-cols-2 gap-3 sm:gap-4 sm:grid-cols-4">
                    <div className="space-y-1">
                      <p className="text-[10px] uppercase font-bold text-muted">Produzido</p>
                      <p className="text-xl font-bold text-white">R$ {serviceValue.toFixed(2)}</p>
