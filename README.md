@@ -1,36 +1,72 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://nextjs.org/docs/app/api-reference/cli/create-next-app).
+# 💎 FinanceX Premium
 
-## Getting Started
+![Next.js](https://img.shields.io/badge/next.js-000000?style=for-the-badge&logo=nextdotjs&logoColor=white)
+![Supabase](https://img.shields.io/badge/Supabase-3ECF8E?style=for-the-badge&logo=supabase&logoColor=white)
+![TypeScript](https://img.shields.io/badge/typescript-%23007ACC.svg?style=for-the-badge&logo=typescript&logoColor=white)
+![Lucide](https://img.shields.io/badge/Lucide_React-%2361DAFB.svg?style=for-the-badge&logo=react&logoColor=white)
 
-First, run the development server:
+> Sistema de gestão financeira de alta fidelidade para barbearias, com inteligência artificial integrada e design **Liquid Glass**.
 
-```bash
-npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
-```
+---
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+## ✨ Funcionalidades
 
-You can start editing the page by modifying `app/page.tsx`. The page auto-updates as you edit the file.
+### 🧴 Design Liquid Glass
+Interface ultra-moderna com efeitos de vidro fosco, reflexos dinâmicos e fundos animados (blobs) que proporcionam uma experiência visual premium.
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+### 🤖 Assistente AIDA (IA)
+Processamento inteligente de linguagem natural. Digite *"Corte R$ 35 no pix"* ou *"Comprei materiais R$ 50"* e a AIDA cuida de lançar tudo no seu fluxo de caixa automaticamente.
 
-## Learn More
+### 📱 Responsividade Total
+Layout otimizado para tablets e smartphones, com navegação fluida e grid adaptativo que funciona em qualquer tamanho de tela.
 
-To learn more about Next.js, take a look at the following resources:
+### 📊 Gestão de Equipe & Produtos
+- Cadastro e edição de barbeiros (comissionamento flexível).
+- Controle de estoque e catálogo de produtos.
+- Dashboard financeiro com entradas, saídas e gorjetas.
+- Relatórios de fechamento de dia detalhados.
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+---
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## 🛠️ Tecnologias
 
-## Deploy on Vercel
+- **Framework**: [Next.js 15 (App Router)](https://nextjs.org/)
+- **Banco de Dados & Auth**: [Supabase](https://supabase.com/)
+- **Estilização**: Tailwind CSS + Custom Vanilla CSS (Liquid UI)
+- **Ícones**: Lucide React
+- **Deploy**: Vercel
 
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
+---
 
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+## 🚀 Configuração Rápida
+
+1. **Clonar o Repositório**
+   ```bash
+   git clone [URL_DO_REPOSITORIO]
+   cd financex
+   ```
+
+2. **Instalar Dependências**
+   ```bash
+   npm install
+   ```
+
+3. **Variáveis de Ambiente**
+   Crie um arquivo `.env.local` na raiz:
+   ```env
+   NEXT_PUBLIC_SUPABASE_URL=seu_url_do_supabase
+   NEXT_PUBLIC_SUPABASE_ANON_KEY=sua_chave_anonima
+   ```
+
+4. **Executar o App**
+   ```bash
+   npm run dev
+   ```
+
+---
+
+## 📄 Licença
+
+Este projeto é de uso privado para gestão de negócios.
+
+**Desenvolvido com ❤️ por Antigravity AI.**
