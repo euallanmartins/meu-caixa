@@ -36,6 +36,7 @@ create table public.servicos (
     barbearia_id uuid references public.barbearias(id) not null,
     nome text not null,
     valor decimal(10,2) not null,
+    duracao_minutos integer default 30,
     created_at timestamp with time zone default timezone('utc'::text, now()) not null
 );
 
@@ -181,4 +182,61 @@ using (barbearia_id in (select barbearia_id from public.profiles where id = auth
 
 create policy "Acesso por barbearia_id"
 on public.caixinhas for all
+using (barbearia_id in (select barbearia_id from public.profiles where id = auth.uid()));
+
+-- 11. Clientes (Cadastro para Agendamento)
+create table public.clientes (
+    id uuid primary key default uuid_generate_v4(),
+    barbearia_id uuid references public.barbearias(id) not null,
+    nome text not null,
+    email text not null,
+    telefone text not null,
+    created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+alter table public.clientes enable row level security;
+
+create policy "Inserção pública de clientes"
+on public.clientes for insert
+with check (true);
+
+create policy "Leitura por dono da barbearia"
+on public.clientes for select
+using (barbearia_id in (select barbearia_id from public.profiles where id = auth.uid()));
+
+-- 12. Agendamentos
+create table public.agendamentos (
+    id uuid primary key default uuid_generate_v4(),
+    barbearia_id uuid references public.barbearias(id) not null,
+    cliente_id uuid references public.clientes(id) not null,
+    barbeiro_id uuid references public.barbeiros(id) not null,
+    servico_id uuid references public.servicos(id) not null,
+    data_hora_inicio timestamp with time zone not null,
+    data_hora_fim timestamp with time zone not null,
+    valor_estimado decimal(10,2),
+    status text check (status in ('pendente', 'confirmado', 'atendido', 'cancelado')) default 'pendente',
+    observacoes text,
+    created_at timestamp with time zone default timezone('utc'::text, now()) not null
+);
+
+alter table public.agendamentos enable row level security;
+
+create policy "Inserção pública de agendamentos"
+on public.agendamentos for insert
+with check (true);
+
+create policy "Leitura por dono"
+on public.agendamentos for select
+using (barbearia_id in (select barbearia_id from public.profiles where id = auth.uid()));
+
+create policy "Leitura anon para conflitos"
+on public.agendamentos for select
+using (auth.role() = 'anon');
+
+create policy "Update por dono"
+on public.agendamentos for update
+using (barbearia_id in (select barbearia_id from public.profiles where id = auth.uid()));
+
+create policy "Delete por dono"
+on public.agendamentos for delete
 using (barbearia_id in (select barbearia_id from public.profiles where id = auth.uid()));

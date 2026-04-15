@@ -4,20 +4,24 @@ import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
 import { supabase } from '@/lib/supabase';
 import { AIAssistant } from '@/components/AIAssistant';
-import { LogOut, Scissors, User } from 'lucide-react';
+import { LogOut, Scissors, User, Calendar } from 'lucide-react';
 import { useDashboardData } from '@/hooks/useDashboardData';
 
 import { BarbersView } from '@/components/BarbersView';
 import { DailyCashView } from '@/components/DailyCashView';
 import { ProductsView } from '@/components/ProductsView';
 import { BarberAppointmentsView } from '@/components/BarberAppointmentsView';
+import { ScheduleView } from '@/components/ScheduleView';
+
+const ADMIN_EMAIL = 'alin.tyga@gmail.com';
 
 export default function Dashboard() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'barbers' | 'cash' | 'products' | 'mine'>('barbers');
+  const [activeTab, setActiveTab] = useState<'barbers' | 'cash' | 'products' | 'mine' | 'schedule'>('barbers');
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
+  const isAdmin = user?.email === ADMIN_EMAIL;
   
   // Real data fetching
   const { transactions, barbers, loading: dataLoading, refreshData } = useDashboardData(profile?.barbearia_id || null);
@@ -100,7 +104,8 @@ export default function Dashboard() {
               { id: 'barbers', label: 'Barbeiros', color: 'text-accent', bar: 'bg-accent' },
               { id: 'cash', label: 'Caixa do Dia', color: 'text-white', bar: 'bg-white' },
               { id: 'mine', label: 'Atendimentos', color: 'text-blue-400', bar: 'bg-blue-500' },
-              { id: 'products', label: 'Produtos', color: 'text-purple-400', bar: 'bg-purple-500' }
+              { id: 'products', label: 'Produtos', color: 'text-purple-400', bar: 'bg-purple-500' },
+              { id: 'schedule', label: 'Agenda', color: 'text-orange-400', bar: 'bg-orange-500' }
             ].map((tab) => (
               <button 
                 key={tab.id}
@@ -161,7 +166,13 @@ export default function Dashboard() {
                   loading={dataLoading}
                   onRefresh={refreshData}
                 />
-             ) : (
+             ) : activeTab === 'schedule' ? (
+                <ScheduleView 
+                  barbeariaId={profile?.barbearia_id}
+                  barbers={barbers}
+                  refreshData={refreshData}
+                />
+              ) : (
                 <ProductsView 
                   barbeariaId={profile?.barbearia_id}
                 />
