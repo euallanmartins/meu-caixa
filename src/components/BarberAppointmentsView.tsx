@@ -1,7 +1,7 @@
 'use client';
 
 import { useState } from 'react';
-import { User, Scissors, Sparkles, Package, Clock, Filter, Wallet, Trash2, Pencil } from 'lucide-react';
+import { User, Scissors, Sparkles, Package, Clock, Wallet, Trash2, Pencil } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { EditTransactionModal } from './EditTransactionModal';
 
@@ -13,18 +13,8 @@ interface BarberAppointmentsViewProps {
 }
 
 export function BarberAppointmentsView({ barbers, transactions, loading, onRefresh }: BarberAppointmentsViewProps) {
-  const [selectedBarberId, setSelectedBarberId] = useState<string>('');
   const [isDeleting, setIsDeleting] = useState<string | null>(null);
   const [editingTx, setEditingTx] = useState<any | null>(null);
-
-  const selectedBarber = barbers.find(b => b.id === selectedBarberId);
-  const myTransactions = transactions.filter(t => t.barbeiro_id === selectedBarberId);
-
-  const stats = {
-    produced: myTransactions.filter(t => t.type === 'income').reduce((acc, t) => acc + t.amount, 0),
-    commission: myTransactions.filter(t => t.type === 'income').reduce((acc, t) => acc + (t.comissao || 0), 0),
-    tips: myTransactions.filter(t => t.type === 'tip').reduce((acc, t) => acc + t.amount, 0),
-  };
 
   const formatCurrency = (val: number) => {
     return new Intl.NumberFormat('pt-BR', {
@@ -43,9 +33,7 @@ export function BarberAppointmentsView({ barbers, transactions, loading, onRefre
         const { error } = await supabase.from('caixinhas').delete().eq('id', tx.id);
         if (error) throw error;
       } else {
-        // It's an income (Service or Product)
         if (tx.description.includes('Venda:')) {
-          // 1. Find the venda_produtos record (could be tx.id or linked by transacao_id)
           const { data: venda, error: vError } = await supabase
             .from('venda_produtos')
             .select('id, produto_id, quantidade')
@@ -55,17 +43,14 @@ export function BarberAppointmentsView({ barbers, transactions, loading, onRefre
           if (vError) throw vError;
 
           if (venda) {
-            // 2. Revert stock
             const { data: prod } = await supabase.from('produtos').select('estoque').eq('id', venda.produto_id).single();
             if (prod) {
               await supabase.from('produtos').update({ estoque: prod.estoque + venda.quantidade }).eq('id', venda.produto_id);
             }
-            // 3. Delete the sale record specifically
             await supabase.from('venda_produtos').delete().eq('id', venda.id);
           }
         }
         
-        // 4. Delete from transacoes (will cascade to transacao_pagamentos)
         const { error: tError } = await supabase.from('transacoes').delete().eq('id', tx.id);
         if (tError) console.warn('Possible skip if ID is from sale table:', tError);
       }
@@ -86,152 +71,180 @@ export function BarberAppointmentsView({ barbers, transactions, loading, onRefre
      </div>
   );
 
+  // Agrupar transações por barbeiro
+  const barberQueues = barbers.map(barber => {
+    const barberTxs = transactions.filter(t => t.barbeiro_id === barber.id);
+    const stats = {
+      produced: barberTxs.filter(t => t.type === 'income').reduce((acc, t) => acc + t.amount, 0),
+      commission: barberTxs.filter(t => t.type === 'income').reduce((acc, t) => acc + (t.comissao || 0), 0),
+      tips: barberTxs.filter(t => t.type === 'tip').reduce((acc, t) => acc + t.amount, 0),
+      count: barberTxs.filter(t => t.type === 'income').length,
+    };
+    return { barber, transactions: barberTxs, stats };
+  }).filter(q => q.transactions.length > 0 || true); // Mostrar todos, mesmo sem atendimentos
+
+  // Barbeiros com atendimentos primeiro
+  barberQueues.sort((a, b) => b.transactions.length - a.transactions.length);
+
   return (
     <div className="space-y-8 pb-10">
       <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-2">
         <div className="space-y-1">
-          <h2 className="text-2xl font-bold text-white">Meus Atendimentos</h2>
-          <p className="text-sm text-muted">Acompanhe sua produção e ganhos do dia</p>
+          <h2 className="text-2xl font-bold text-white">Atendimentos</h2>
+          <p className="text-sm text-muted">Fila de atendimentos por profissional</p>
         </div>
-
-        <div className="relative min-w-[200px]">
-           <select 
-             value={selectedBarberId}
-             onChange={(e) => setSelectedBarberId(e.target.value)}
-             className="w-full appearance-none bg-white/5 border border-white/10 rounded-xl px-4 py-3 text-sm text-white focus:outline-none focus:ring-2 focus:ring-accent/50 pr-10"
-           >
-             <option value="" className="bg-zinc-900">Selecione seu nome</option>
-             {barbers.map(b => (
-               <option key={b.id} value={b.id} className="bg-zinc-900">{b.nome}</option>
-             ))}
-           </select>
-           <Filter className="absolute right-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted pointer-events-none" />
+        <div className="flex items-center gap-3">
+          <div className="px-4 py-2 bg-white/5 rounded-xl border border-white/10 text-xs font-bold text-muted uppercase">
+            {transactions.filter(t => t.type === 'income').length} atendimentos hoje
+          </div>
         </div>
       </div>
 
-      {!selectedBarberId ? (
-        <div className="glass rounded-2xl sm:rounded-[2.5rem] p-10 sm:p-20 flex flex-col items-center justify-center border-dashed border-border/50">
-           <div className="h-20 w-20 rounded-full bg-accent/10 flex items-center justify-center mb-6">
-              <User className="h-10 w-10 text-accent/50" />
-           </div>
-           <h3 className="text-xl font-bold text-white mb-2">Quem é você?</h3>
-           <p className="text-muted text-center max-w-xs text-sm">
-              Selecione seu nome acima para visualizar suas metas e atendimentos do dia.
-           </p>
+      {/* Resumo geral compacto */}
+      <div className="grid grid-cols-3 gap-3 sm:gap-4">
+        <div className="glass p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-border text-center">
+          <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-muted mb-1">Total Produzido</p>
+          <p className="text-base sm:text-xl font-black text-white">
+            {formatCurrency(transactions.filter(t => t.type === 'income').reduce((a, t) => a + t.amount, 0))}
+          </p>
         </div>
-      ) : (
-        <div className="space-y-8 animate-in fade-in slide-in-from-bottom-4 duration-500">
-          {/* Stats Bar */}
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
-             <div className="glass p-6 rounded-2xl border border-border">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-muted mb-2">Total Produzido</p>
-                <div className="flex items-end justify-between">
-                   <h4 className="text-2xl font-black text-white">{formatCurrency(stats.produced)}</h4>
-                   <Scissors className="h-5 w-5 text-accent/50" />
-                </div>
-             </div>
-             
-             <div className="glass p-6 rounded-2xl border border-accent/20 bg-accent/5">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-accent mb-2">Sua Comissão</p>
-                <div className="flex items-end justify-between">
-                   <h4 className="text-2xl font-black text-accent">{formatCurrency(stats.commission)}</h4>
-                   <Wallet className="h-5 w-5 text-accent/50" />
-                </div>
-                <p className="text-[9px] text-accent/60 mt-2 italic font-medium">Estimativa a receber hoje</p>
-             </div>
+        <div className="glass p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-accent/20 bg-accent/5 text-center">
+          <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-accent mb-1">Comissões</p>
+          <p className="text-base sm:text-xl font-black text-accent">
+            {formatCurrency(transactions.filter(t => t.type === 'income').reduce((a, t) => a + (t.comissao || 0), 0))}
+          </p>
+        </div>
+        <div className="glass p-3 sm:p-4 rounded-xl sm:rounded-2xl border border-accent-gold/20 bg-accent-gold/5 text-center">
+          <p className="text-[9px] sm:text-[10px] font-bold uppercase tracking-widest text-accent-gold mb-1">Gorjetas</p>
+          <p className="text-base sm:text-xl font-black text-accent-gold">
+            {formatCurrency(transactions.filter(t => t.type === 'tip').reduce((a, t) => a + t.amount, 0))}
+          </p>
+        </div>
+      </div>
 
-             <div className="glass p-6 rounded-2xl border border-accent-gold/20 bg-accent-gold/5">
-                <p className="text-[10px] font-bold uppercase tracking-widest text-accent-gold mb-2">Gorjetas</p>
-                <div className="flex items-end justify-between">
-                   <h4 className="text-2xl font-black text-accent-gold">{formatCurrency(stats.tips)}</h4>
-                   <Sparkles className="h-5 w-5 text-accent-gold/50" />
+      {/* Filas por Barbeiro */}
+      <div className="space-y-6">
+        {barberQueues.map(({ barber, transactions: barberTxs, stats }) => (
+          <div key={barber.id} className="glass rounded-2xl border border-border overflow-hidden">
+            {/* Header do Barbeiro */}
+            <div className="p-4 sm:p-5 border-b border-white/5 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+              <div className="flex items-center gap-3">
+                <div className="h-10 w-10 sm:h-12 sm:w-12 rounded-xl bg-accent/10 flex items-center justify-center text-accent font-black text-lg">
+                  {barber.nome.substring(0, 1)}
                 </div>
-             </div>
-          </div>
+                <div>
+                  <h3 className="font-bold text-white text-base sm:text-lg">{barber.nome}</h3>
+                  <p className="text-[10px] text-muted uppercase tracking-widest font-medium">
+                    {stats.count} {stats.count === 1 ? 'atendimento' : 'atendimentos'} • Comissão: {barber.comissao}{barber.comissao_tipo === 'percentual' ? '%' : ' R$'}
+                  </p>
+                </div>
+              </div>
 
-          {/* Timeline */}
-          <div className="glass rounded-3xl border border-border overflow-hidden">
-             <div className="p-6 border-b border-border flex items-center justify-between">
-                <h3 className="font-bold text-white flex items-center gap-2">
-                   <Clock className="h-4 w-4 text-accent" />
-                   Meus Lançamentos
-                </h3>
-                <span className="px-3 py-1 bg-white/5 rounded-full text-[10px] font-bold text-muted uppercase">
-                   {myTransactions.length} registros
-                </span>
-             </div>
-
-             <div className="p-6">
-                {myTransactions.length === 0 ? (
-                   <p className="text-center py-12 text-muted text-sm italic">Nenhum atendimento lançado hoje.</p>
-                ) : (
-                   <div className="space-y-6 relative">
-                      <div className="absolute left-[17px] top-6 bottom-6 w-[1px] bg-border/50"></div>
-                      
-                      {myTransactions.map((tx) => (
-                         <div key={tx.id} className="relative flex items-start gap-4 transform transition-transform hover:translate-x-1">
-                            <div className={`mt-1.5 h-9 w-9 shrink-0 rounded-full flex items-center justify-center z-10 shadow-lg ${
-                               tx.type === 'income' ? 'bg-accent/20 border border-accent/30' : 'bg-accent-gold/20 border border-accent-gold/30'
-                            }`}>
-                               {tx.description.includes('Venda:') ? <Package className="h-4 w-4 text-purple-400" /> : 
-                                tx.type === 'income' ? <Scissors className="h-4 w-4 text-accent" /> : 
-                                <Sparkles className="h-4 w-4 text-accent-gold" />}
-                            </div>
-                            
-                            <div className="flex-1 bg-white/5 p-4 rounded-2xl border border-white/5 group hover:bg-white-[0.07] transition-all">
-                               <div className="flex justify-between items-start">
-                                  <div>
-                                     <h5 className="text-sm font-bold text-white">{tx.description}</h5>
-                                     <p className="text-[10px] text-muted uppercase font-bold tracking-tighter">
-                                        {new Date(tx.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} &bull; {
-                                           tx.payments && tx.payments.length > 1 
-                                            ? tx.payments.map((p: any) => p.metodo).join(' + ')
-                                            : tx.method
-                                        }
-                                     </p>
-                                  </div>
-                                  <div className="text-right">
-                                     <p className={`text-sm font-black ${tx.type === 'income' ? 'text-white' : 'text-accent-gold'}`}>
-                                        {formatCurrency(tx.amount)}
-                                     </p>
-                                     <div className="mt-2 flex items-center justify-end gap-2 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
-                                        <button 
-                                          onClick={() => setEditingTx(tx)}
-                                          className="p-1.5 rounded-lg bg-white/5 text-muted hover:text-white transition-colors"
-                                        >
-                                           <Pencil className="h-3 w-3" />
-                                        </button>
-                                        <div className="flex items-center gap-1 overflow-hidden transition-all duration-300">
-                                           {isDeleting === tx.id ? (
-                                             <button 
-                                               onClick={() => performDelete(tx)}
-                                               className="px-2 py-1 rounded-lg bg-danger text-white text-[9px] font-black uppercase tracking-tighter animate-in slide-in-from-right-2"
-                                             >
-                                                Confirmar?
-                                             </button>
-                                           ) : null}
-                                           
-                                           <button 
-                                             onClick={() => setIsDeleting(isDeleting === tx.id ? null : tx.id)}
-                                             className={`p-1.5 rounded-lg transition-colors ${
-                                               isDeleting === tx.id ? 'bg-white/10 text-white' : 'bg-danger/10 text-danger hover:bg-danger hover:text-white'
-                                             }`}
-                                           >
-                                              <Trash2 className="h-3 w-3" />
-                                           </button>
-                                        </div>
-                                     </div>
-                                  </div>
-                               </div>
-                            </div>
-                         </div>
-                      ))}
-                   </div>
+              {/* Mini stats inline */}
+              <div className="flex items-center gap-2 sm:gap-3">
+                <div className="px-3 py-1.5 bg-white/5 rounded-lg border border-white/5">
+                  <span className="text-[9px] text-muted uppercase font-bold block">Produziu</span>
+                  <span className="text-xs font-black text-white">{formatCurrency(stats.produced)}</span>
+                </div>
+                <div className="px-3 py-1.5 bg-accent/5 rounded-lg border border-accent/10">
+                  <span className="text-[9px] text-accent uppercase font-bold block">Comissão</span>
+                  <span className="text-xs font-black text-accent">{formatCurrency(stats.commission)}</span>
+                </div>
+                {stats.tips > 0 && (
+                  <div className="px-3 py-1.5 bg-accent-gold/5 rounded-lg border border-accent-gold/10">
+                    <span className="text-[9px] text-accent-gold uppercase font-bold block">Gorjetas</span>
+                    <span className="text-xs font-black text-accent-gold">{formatCurrency(stats.tips)}</span>
+                  </div>
                 )}
-             </div>
+              </div>
+            </div>
+
+            {/* Lista de Atendimentos */}
+            <div className="p-3 sm:p-4">
+              {barberTxs.length === 0 ? (
+                <p className="text-center py-6 text-muted text-sm italic">Nenhum atendimento lançado hoje.</p>
+              ) : (
+                <div className="space-y-2">
+                  {barberTxs.map((tx) => (
+                    <div 
+                      key={tx.id} 
+                      className="flex items-center justify-between gap-3 p-3 rounded-xl bg-white/[0.02] border border-white/5 group hover:bg-white/[0.05] transition-all"
+                    >
+                      {/* Ícone + Info */}
+                      <div className="flex items-center gap-3 min-w-0 flex-1">
+                        <div className={`h-8 w-8 shrink-0 rounded-lg flex items-center justify-center ${
+                          tx.description.includes('Venda:') ? 'bg-purple-500/20' :
+                          tx.type === 'income' ? 'bg-accent/20' : 'bg-accent-gold/20'
+                        }`}>
+                          {tx.description.includes('Venda:') ? <Package className="h-3.5 w-3.5 text-purple-400" /> :
+                           tx.type === 'income' ? <Scissors className="h-3.5 w-3.5 text-accent" /> :
+                           <Sparkles className="h-3.5 w-3.5 text-accent-gold" />}
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <p className="text-sm font-bold text-white truncate">{tx.description}</p>
+                          <p className="text-[10px] text-muted uppercase font-medium tracking-tighter">
+                            <Clock className="h-2.5 w-2.5 inline mr-0.5" />
+                            {new Date(tx.date).toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })} • {
+                              tx.payments && tx.payments.length > 1 
+                                ? tx.payments.map((p: any) => p.metodo).join(' + ')
+                                : tx.method
+                            }
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Valor + Ações */}
+                      <div className="flex items-center gap-2 shrink-0">
+                        <span className={`text-sm font-black ${
+                          tx.type === 'income' ? 'text-accent' : 'text-accent-gold'
+                        }`}>
+                          {formatCurrency(tx.amount)}
+                        </span>
+
+                        {/* Botões de ação - sempre visíveis no mobile */}
+                        <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
+                          <button 
+                            onClick={() => setEditingTx(tx)}
+                            className="p-1.5 rounded-lg bg-white/5 text-muted hover:text-white transition-colors"
+                          >
+                            <Pencil className="h-3 w-3" />
+                          </button>
+                          
+                          {isDeleting === tx.id ? (
+                            <button 
+                              onClick={() => performDelete(tx)}
+                              className="px-2 py-1 rounded-lg bg-danger text-white text-[9px] font-black uppercase animate-in slide-in-from-right-2"
+                            >
+                              OK?
+                            </button>
+                          ) : null}
+                          
+                          <button 
+                            onClick={() => setIsDeleting(isDeleting === tx.id ? null : tx.id)}
+                            className={`p-1.5 rounded-lg transition-colors ${
+                              isDeleting === tx.id ? 'bg-white/10 text-white' : 'bg-danger/10 text-danger hover:bg-danger hover:text-white'
+                            }`}
+                          >
+                            <Trash2 className="h-3 w-3" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              )}
+            </div>
+
+            {/* Footer: Total a Receber */}
+            {stats.produced > 0 && (
+              <div className="px-4 sm:px-5 py-3 border-t border-white/5 bg-accent/[0.03] flex items-center justify-between">
+                <span className="text-xs font-bold text-accent/70 uppercase tracking-wider">Total a Receber</span>
+                <span className="text-base sm:text-lg font-black text-accent">{formatCurrency(stats.commission + stats.tips)}</span>
+              </div>
+            )}
           </div>
-        </div>
-      )}
+        ))}
+      </div>
 
       {editingTx && (
         <EditTransactionModal 
