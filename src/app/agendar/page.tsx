@@ -5,9 +5,6 @@ import { Scissors, Calendar, Clock, User, Mail, Phone, ChevronRight, ChevronLeft
 import { supabase } from '@/lib/supabase';
 
 const BARBEARIA_ID = 'a251aedd-347a-466a-a26a-4b53d394f7ae';
-const BUFFER_MINUTES = 10;
-const OPEN_HOUR = 8;
-const CLOSE_HOUR = 21;
 
 export default function AgendarPage() {
   const [step, setStep] = useState(1);
@@ -28,6 +25,11 @@ export default function AgendarPage() {
   const [selectedTime, setSelectedTime] = useState('');
   const [availableSlots, setAvailableSlots] = useState<string[]>([]);
   const [barbeariaNome, setBarbeariaNome] = useState('');
+  
+  // Dynamic config from DB
+  const [openHour, setOpenHour] = useState(8);
+  const [closeHour, setCloseHour] = useState(21);
+  const [bufferMinutes, setBufferMinutes] = useState(10);
 
   useEffect(() => {
     loadData();
@@ -37,11 +39,14 @@ export default function AgendarPage() {
     const [{ data: barbs }, { data: servs }, { data: barb }] = await Promise.all([
       supabase.from('barbeiros').select('*').eq('barbearia_id', BARBEARIA_ID).eq('ativo', true),
       supabase.from('servicos').select('*').eq('barbearia_id', BARBEARIA_ID),
-      supabase.from('barbearias').select('nome').eq('id', BARBEARIA_ID).single()
+      supabase.from('barbearias').select('nome, horario_abertura, horario_fechamento, buffer_minutos').eq('id', BARBEARIA_ID).single()
     ]);
     setBarbeiros(barbs || []);
     setServicos(servs || []);
     setBarbeariaNome(barb?.nome || 'Barbearia');
+    setOpenHour(barb?.horario_abertura ?? 8);
+    setCloseHour(barb?.horario_fechamento ?? 21);
+    setBufferMinutes(barb?.buffer_minutos ?? 10);
   }
 
   // Generate dates for next 14 days
@@ -63,30 +68,48 @@ export default function AgendarPage() {
   async function loadSlots(date: string) {
     if (!selectedBarbeiro || !selectedServico) return;
     
-    const duracao = (selectedServico.duracao_minutos || 30) + BUFFER_MINUTES;
+    const duracao = (selectedServico.duracao_minutos || 30) + bufferMinutes;
     
     // Get existing appointments for this barber on this date
     const startOfDay = `${date}T00:00:00`;
     const endOfDay = `${date}T23:59:59`;
     
-    const { data: existing } = await supabase
-      .from('agendamentos')
-      .select('data_hora_inicio, data_hora_fim')
-      .eq('barbeiro_id', selectedBarbeiro.id)
-      .gte('data_hora_inicio', startOfDay)
-      .lte('data_hora_inicio', endOfDay)
-      .not('status', 'eq', 'cancelado');
+    const [{ data: existing }, { data: blocks }] = await Promise.all([
+      supabase
+        .from('agendamentos')
+        .select('data_hora_inicio, data_hora_fim')
+        .eq('barbeiro_id', selectedBarbeiro.id)
+        .gte('data_hora_inicio', startOfDay)
+        .lte('data_hora_inicio', endOfDay)
+        .not('status', 'eq', 'cancelado'),
+      supabase
+        .from('bloqueios')
+        .select('*')
+        .eq('barbearia_id', BARBEARIA_ID)
+        .eq('data', date)
+    ]);
+
+    // Check for full-day block
+    const fullDayBlock = (blocks || []).some(b => 
+      b.tipo === 'dia' && (!b.barbeiro_id || b.barbeiro_id === selectedBarbeiro.id)
+    );
+    if (fullDayBlock) { setAvailableSlots([]); return; }
+
+    // Time-range blocks for this barber
+    const timeBlocks = (blocks || []).filter(b => 
+      b.tipo === 'horario' && (!b.barbeiro_id || b.barbeiro_id === selectedBarbeiro.id)
+    );
 
     const occupied = (existing || []).map(a => ({
       start: new Date(a.data_hora_inicio).getTime(),
-      end: new Date(a.data_hora_fim).getTime() + BUFFER_MINUTES * 60000,
+      end: new Date(a.data_hora_fim).getTime() + bufferMinutes * 60000,
     }));
 
     // Generate all 15-min slots
     const slots: string[] = [];
     const now = new Date();
     
-    for (let h = OPEN_HOUR; h < CLOSE_HOUR; h++) {
+    for (let h = openHour; h < closeHour; h++) {
       for (let m = 0; m < 60; m += 15) {
         const slotStart = new Date(`${date}T${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}:00`);
         const slotEnd = new Date(slotStart.getTime() + duracao * 60000);
@@ -95,17 +118,24 @@ export default function AgendarPage() {
         if (slotStart <= now) continue;
         
         // Don't show slots that go past closing
-        const closeTime = new Date(`${date}T${CLOSE_HOUR}:00:00`);
+        const closeTime = new Date(`${date}T${String(closeHour).padStart(2, '0')}:00:00`);
         if (slotEnd > closeTime) continue;
 
-        // Check for conflicts
+        // Check for appointment conflicts
         const hasConflict = occupied.some(occ => 
           slotStart.getTime() < occ.end && slotEnd.getTime() > occ.start
         );
+        if (hasConflict) continue;
 
-        if (!hasConflict) {
-          slots.push(`${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`);
-        }
+        // Check for time-block conflicts
+        const slotHHMM = `${String(h).padStart(2, '0')}:${String(m).padStart(2, '0')}`;
+        const slotEndHH = String(Math.floor((h * 60 + m + duracao) / 60)).padStart(2, '0');
+        const slotEndMM = String((h * 60 + m + duracao) % 60).padStart(2, '0');
+        const slotEndStr = `${slotEndHH}:${slotEndMM}`;
+        const isBlocked = timeBlocks.some(tb => slotHHMM < tb.hora_fim && slotEndStr > tb.hora_inicio);
+        if (isBlocked) continue;
+
+        slots.push(slotHHMM);
       }
     }
 

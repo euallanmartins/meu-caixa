@@ -12,13 +12,15 @@ import { DailyCashView } from '@/components/DailyCashView';
 import { ProductsView } from '@/components/ProductsView';
 import { BarberAppointmentsView } from '@/components/BarberAppointmentsView';
 import { ScheduleView } from '@/components/ScheduleView';
+import { ServicesView } from '@/components/ServicesView';
+import { ClientsView } from '@/components/ClientsView';
 
 const ADMIN_EMAIL = 'alin.tyga@gmail.com';
 
 export default function Dashboard() {
   const router = useRouter();
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState<'barbers' | 'cash' | 'products' | 'mine' | 'schedule'>('barbers');
+  const [activeTab, setActiveTab] = useState<'barbers' | 'cash' | 'products' | 'mine' | 'schedule' | 'services' | 'clients'>('barbers');
   const [user, setUser] = useState<any>(null);
   const [profile, setProfile] = useState<any>(null);
   const isAdmin = user?.email === ADMIN_EMAIL;
@@ -105,7 +107,9 @@ export default function Dashboard() {
               { id: 'cash', label: 'Caixa do Dia', color: 'text-white', bar: 'bg-white' },
               { id: 'mine', label: 'Atendimentos', color: 'text-blue-400', bar: 'bg-blue-500' },
               { id: 'products', label: 'Produtos', color: 'text-purple-400', bar: 'bg-purple-500' },
-              { id: 'schedule', label: 'Agenda', color: 'text-orange-400', bar: 'bg-orange-500' }
+              { id: 'services', label: 'Serviços', color: 'text-cyan-400', bar: 'bg-cyan-500' },
+              { id: 'schedule', label: 'Agenda', color: 'text-orange-400', bar: 'bg-orange-500' },
+              { id: 'clients', label: 'Clientes', color: 'text-pink-400', bar: 'bg-pink-500' }
             ].map((tab) => (
               <button 
                 key={tab.id}
@@ -171,6 +175,14 @@ export default function Dashboard() {
                   barbeariaId={profile?.barbearia_id}
                   barbers={barbers}
                   refreshData={refreshData}
+                />
+              ) : activeTab === 'services' ? (
+                <ServicesView 
+                  barbeariaId={profile?.barbearia_id}
+                />
+              ) : activeTab === 'clients' ? (
+                <ClientsView 
+                  barbeariaId={profile?.barbearia_id}
                 />
               ) : (
                 <ProductsView 
