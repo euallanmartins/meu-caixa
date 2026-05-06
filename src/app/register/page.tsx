@@ -1,3 +1,4 @@
+﻿/* eslint-disable */
 'use client';
 
 import { useState } from 'react';
@@ -124,7 +125,7 @@ export default function RegisterPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full rounded-xl border border-border bg-card/50 py-3 pl-11 pr-12 text-white placeholder-muted focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent transition-all"
-                placeholder="••••••••"
+                placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
               />
               <button
                 type="button"
@@ -140,16 +141,16 @@ export default function RegisterPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-xl bg-accent py-4 mt-4 font-bold text-black transition-all hover:scale-[1.02] hover:shadow-[0_0_20px_rgba(0,255,136,0.4)] active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100"
+            className="w-full rounded-xl bg-accent py-4 mt-4 font-bold text-black transition-all hover:scale-[1.02] hover:shadow-[0_0_20px_rgba(214,180,122,0.4)] active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100"
           >
             {loading ? 'Criando conta...' : 'Cadastrar'}
           </button>
         </form>
 
         <p className="mt-6 text-center text-sm text-muted">
-          Já tem uma conta?{' '}
+          JÃ¡ tem uma conta?{' '}
           <a href="/login" className="font-medium text-accent hover:underline">
-            Faça login
+            FaÃ§a login
           </a>
         </p>
       </div>

@@ -1,0 +1,18 @@
+{
+  "name": "Minha Agenda",
+  "short_name": "Agenda",
+  "description": "Seus agendamentos do dia",
+  "start_url": "/dashboard/agenda",
+  "display": "standalone",
+  "background_color": "#0a0a0a",
+  "theme_color": "#0a0a0a",
+  "orientation": "portrait",
+  "icons": [
+    { "src": "/icons/icon-192-barbeiro.png", "sizes": "192x192", "type": "image/png" },
+    { "src": "/icons/icon-512-barbeiro.png", "sizes": "512x512", "type": "image/png" }
+  ],
+  "screenshots": [
+    { "src": "/screenshots/agenda.png", "sizes": "390x844", "type": "image/png", "form_factor": "narrow" }
+  ],
+  "categories": ["lifestyle", "productivity"]
+}

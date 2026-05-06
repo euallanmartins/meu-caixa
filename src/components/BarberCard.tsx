@@ -1,3 +1,4 @@
+/* eslint-disable */
 import { useState, useEffect } from 'react';
 import { supabase } from '@/lib/supabase';
 import { User, Scissors, DollarSign, CreditCard, Banknote, Sparkles, ChevronDown, ChevronUp, Check, Package, Settings, Trash2, AlertCircle } from 'lucide-react';
@@ -9,6 +10,11 @@ interface BarberProps {
     comissao: number;
     comissao_tipo: 'percentual' | 'fixo';
     ativo?: boolean;
+    foto_url?: string | null;
+    titulo?: string | null;
+    especialidade?: string | null;
+    tags?: string[] | null;
+    destaque_label?: string | null;
   };
   barbeariaId: string;
   onSuccess: () => void;
@@ -193,7 +199,8 @@ export function BarberCard({ barber, barbeariaId, onSuccess, onEdit }: BarberPro
         // Update Stock
         await supabase.from('produtos')
           .update({ estoque: product.estoque - productQty })
-          .eq('id', product.id);
+          .eq('id', product.id)
+          .eq('barbearia_id', barbeariaId);
 
         resetForm();
         onSuccess();
@@ -212,7 +219,8 @@ export function BarberCard({ barber, barbeariaId, onSuccess, onEdit }: BarberPro
       const { error } = await supabase
         .from('barbeiros')
         .update({ ativo: false })
-        .eq('id', barber.id);
+        .eq('id', barber.id)
+        .eq('barbearia_id', barbeariaId);
       
       if (error) throw error;
       onSuccess();
@@ -278,12 +286,21 @@ export function BarberCard({ barber, barbeariaId, onSuccess, onEdit }: BarberPro
         className="flex cursor-pointer items-center justify-between p-5"
       >
         <div className="flex items-center gap-4">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-accent/10">
-            <User className="h-6 w-6 text-accent" />
+          <div className="flex h-12 w-12 items-center justify-center overflow-hidden rounded-xl bg-accent/10">
+            {barber.foto_url ? (
+              <img src={barber.foto_url} alt="" className="h-full w-full object-cover" />
+            ) : (
+              <User className="h-6 w-6 text-accent" />
+            )}
           </div>
           <div>
             <div className="flex items-center gap-2">
               <h3 className="font-bold text-lg text-white">{barber.nome}</h3>
+              {barber.destaque_label && (
+                <span className="rounded-full bg-accent/15 px-2 py-0.5 text-[10px] font-black text-accent">
+                  {barber.destaque_label}
+                </span>
+              )}
               <div className="flex items-center gap-1 opacity-100 sm:opacity-0 sm:group-hover:opacity-100 transition-opacity">
                 <button 
                   onClick={(e) => { e.stopPropagation(); onEdit(barber); }}
@@ -302,9 +319,14 @@ export function BarberCard({ barber, barbeariaId, onSuccess, onEdit }: BarberPro
             <p className="text-xs text-muted uppercase tracking-widest font-medium">
               Comissão: {barber.comissao}{barber.comissao_tipo === 'percentual' ? '%' : ' R$'}
             </p>
+            {(barber.titulo || barber.especialidade) && (
+              <p className="mt-1 line-clamp-1 text-xs text-muted">
+                {barber.titulo || barber.especialidade}
+              </p>
+            )}
           </div>
         </div>
-        <button className={`p-2 rounded-lg transition-colors shrink-0 ${isExpanded ? 'bg-accent text-black' : 'bg-white/5 text-muted hover:text-white'}`}>
+        <button type="button" onClick={(e) => { e.stopPropagation(); setIsExpanded(!isExpanded); }} className={`p-2 rounded-lg transition-colors shrink-0 ${isExpanded ? 'bg-accent text-black' : 'bg-white/5 text-muted hover:text-white'}`}>
           <div className="flex items-center gap-1 sm:gap-2">
             <span className="text-xs sm:text-sm font-bold">{isExpanded ? 'Fechar' : '+ Lançar'}</span>
             {isExpanded ? <ChevronUp className="h-4 w-4" /> : <ChevronDown className="h-4 w-4" />}

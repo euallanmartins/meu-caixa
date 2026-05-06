@@ -1,4 +1,4 @@
-'use client';
+﻿'use client';
 
 import { useState } from 'react';
 import { Eye, EyeOff, Lock, Mail, Scissors } from 'lucide-react';
@@ -18,7 +18,7 @@ export default function LoginPage() {
     setLoading(true);
     setError(null);
 
-    const { error } = await supabase.auth.signInWithPassword({
+    const { data, error } = await supabase.auth.signInWithPassword({
       email,
       password,
     });
@@ -27,7 +27,30 @@ export default function LoginPage() {
       setError(error.message);
       setLoading(false);
     } else {
-      router.push('/');
+      const userId = data.user?.id;
+      if (!userId) {
+        router.push('/');
+        return;
+      }
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role')
+        .eq('id', userId)
+        .maybeSingle();
+
+      if (profile?.role) {
+        router.push(profile.role === 'admin' ? '/gestao/caixa' : '/gestao/agenda');
+        return;
+      }
+
+      const { data: clientAccount } = await supabase
+        .from('cliente_accounts')
+        .select('auth_user_id')
+        .eq('auth_user_id', userId)
+        .maybeSingle();
+
+      router.push(clientAccount ? '/cliente' : '/');
     }
   }
 
@@ -38,8 +61,8 @@ export default function LoginPage() {
           <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-accent/10 neon-border">
             <Scissors className="h-8 w-8 text-accent" />
           </div>
-          <h1 className="text-2xl font-bold tracking-tight text-white">Meu Caixa</h1>
-          <p className="text-muted text-sm mt-1">Gestão de Barbearia Premium</p>
+          <h1 className="text-2xl font-bold tracking-tight text-white">Acesso profissional</h1>
+          <p className="text-muted text-sm mt-1">Proprietarios e funcionarios</p>
         </div>
 
         <form onSubmit={handleLogin} className="space-y-6">
@@ -78,7 +101,7 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full rounded-xl border border-border bg-card/50 py-3 pl-11 pr-12 text-white placeholder-muted focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent transition-all"
-                placeholder="••••••••"
+                placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
               />
               <button
                 type="button"
@@ -94,21 +117,21 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="w-full rounded-xl bg-accent py-4 font-bold text-black transition-all hover:scale-[1.02] hover:shadow-[0_0_20px_rgba(0,255,136,0.4)] active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100"
+            className="w-full rounded-xl bg-accent py-4 font-bold text-black transition-all hover:scale-[1.02] hover:shadow-[0_0_20px_rgba(214,180,122,0.4)] active:scale-[0.98] disabled:opacity-50 disabled:hover:scale-100"
           >
             {loading ? 'Entrando...' : 'Entrar'}
           </button>
         </form>
 
         <p className="mt-6 text-center text-sm text-muted">
-          Não tem uma conta?{' '}
+          Nao tem uma conta profissional?{' '}
           <a href="/register" className="font-medium text-accent hover:underline">
             Cadastre-se
           </a>
         </p>
 
         <p className="mt-8 text-center text-xs text-muted">
-          Design por Allan Martins &bull; Segurança Zero-Trust
+          Cada equipe acessa apenas o seu estabelecimento.
         </p>
       </div>
     </div>

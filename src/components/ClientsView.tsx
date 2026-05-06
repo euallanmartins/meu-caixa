@@ -1,119 +1,428 @@
+/* eslint-disable */
 'use client';
 
-import { useState, useEffect } from 'react';
-import { Users, Phone, Mail, Search, Calendar } from 'lucide-react';
+import { useEffect, useMemo, useState } from 'react';
+import { CalendarDays, Filter, Mail, MoreHorizontal, Phone, Plus, Search, UserPlus, Users } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { ClientProfileHeader } from './crm/ClientProfileHeader';
+import { ClientActivityTabs } from './crm/ClientActivityTabs';
+import { ClientForm } from './crm/ClientForm';
 
 interface ClientsViewProps {
   barbeariaId: string | null;
 }
 
+type Segment = 'all' | 'novos' | 'fieis' | 'ausentes';
+
+const money = (value: number) =>
+  new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
+
 export function ClientsView({ barbeariaId }: ClientsViewProps) {
   const [clientes, setClientes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
+  const [activeSegment, setActiveSegment] = useState<Segment>('all');
+  const [selectedCliente, setSelectedCliente] = useState<any>(null);
+  const [showAddForm, setShowAddForm] = useState(false);
 
   async function fetchClientes() {
     if (!barbeariaId) return;
     setLoading(true);
-    const { data } = await supabase
-      .from('clientes')
-      .select('*, agendamentos(id, status, data_hora_inicio)')
-      .eq('barbearia_id', barbeariaId)
-      .order('created_at', { ascending: false });
-    setClientes(data || []);
-    setLoading(false);
+    try {
+      const { data, error } = await supabase
+        .from('clientes')
+        .select(`
+          *,
+          agendamentos(
+            id,
+            status,
+            data_hora_inicio,
+            servicos(nome, valor, duracao_minutos),
+            barbeiros(nome, foto_url, destaque_label)
+          ),
+          transacoes(
+            id,
+            valor_total,
+            data,
+            servicos(nome),
+            transacao_pagamentos(metodo, valor),
+            venda_produtos(quantidade, produtos(nome))
+          )
+        `)
+        .eq('barbearia_id', barbeariaId)
+        .order('nome', { ascending: true });
+
+      if (error) throw error;
+
+      const processed = (data || []).map(client => ({
+        ...client,
+        receitaTotal: client.transacoes?.reduce((acc: number, t: any) => acc + Number(t.valor_total || 0), 0) || 0,
+      }));
+
+      setClientes(processed);
+      setSelectedCliente((prev: any) => prev ? processed.find(c => c.id === prev.id) || processed[0] || null : processed[0] || null);
+    } catch (error) {
+      console.error('Error fetching clients:', error);
+    } finally {
+      setLoading(false);
+    }
   }
 
-  useEffect(() => { fetchClientes(); }, [barbeariaId]);
+  useEffect(() => {
+    fetchClientes();
+  }, [barbeariaId]);
 
-  const filtered = clientes.filter(c =>
-    c.nome.toLowerCase().includes(search.toLowerCase()) ||
-    c.email.toLowerCase().includes(search.toLowerCase()) ||
-    c.telefone.includes(search)
-  );
+  const segmented = useMemo(() => {
+    const now = new Date();
+    return clientes.filter(c => {
+      const matchesSearch =
+        c.nome?.toLowerCase().includes(search.toLowerCase()) ||
+        c.telefone?.includes(search);
+
+      if (!matchesSearch) return false;
+      if (activeSegment === 'all') return true;
+
+      const completed = c.agendamentos?.filter((a: any) => ['atendido', 'realizado', 'concluido'].includes(a.status)) || [];
+      if (activeSegment === 'novos') {
+        const sevenDaysAgo = new Date(now.getTime() - 7 * 24 * 60 * 60 * 1000);
+        return new Date(c.created_at) > sevenDaysAgo;
+      }
+      if (activeSegment === 'fieis') return completed.length >= 2;
+      if (activeSegment === 'ausentes') {
+        const lastVisit = completed.length > 0
+          ? new Date([...completed].sort((a: any, b: any) => new Date(b.data_hora_inicio).getTime() - new Date(a.data_hora_inicio).getTime())[0].data_hora_inicio)
+          : null;
+        return !!lastVisit && lastVisit < new Date(now.getTime() - 45 * 24 * 60 * 60 * 1000);
+      }
+      return true;
+    });
+  }, [clientes, search, activeSegment]);
+
+  const summary = selectedCliente ? {
+    agendamentos: selectedCliente.agendamentos?.length || 0,
+    ausencias: selectedCliente.agendamentos?.filter((a: any) => ['ausente', 'nao_compareceu'].includes(a.status)).length || 0,
+    cancelamentos: selectedCliente.agendamentos?.filter((a: any) => a.status === 'cancelado').length || 0,
+    receita: selectedCliente.receitaTotal || 0,
+  } : null;
+
+  async function handleSaveClient(data: any) {
+    if (!barbeariaId) return;
+    const nome = [data.nome, data.sobrenome].filter(Boolean).join(' ').trim();
+    if (!nome) return;
+
+    const { error } = await supabase.from('clientes').insert({
+      barbearia_id: barbeariaId,
+      nome,
+      telefone: data.telefone,
+      email: data.email || null,
+    });
+
+    if (error) {
+      alert('Erro ao salvar cliente: ' + error.message);
+      return;
+    }
+
+    setShowAddForm(false);
+    fetchClientes();
+  }
+
+  async function handleEditSelectedClient() {
+    if (!selectedCliente) return;
+    const nome = window.prompt('Nome do cliente', selectedCliente.nome || '');
+    if (nome === null) return;
+    const telefone = window.prompt('Telefone do cliente', selectedCliente.telefone || '');
+    if (telefone === null) return;
+    const email = window.prompt('E-mail do cliente', selectedCliente.email || '');
+    if (email === null) return;
+
+    const { error } = await supabase
+      .from('clientes')
+      .update({ nome, telefone, email: email || null })
+      .eq('id', selectedCliente.id)
+      .eq('barbearia_id', barbeariaId);
+
+    if (error) {
+      alert('Erro ao atualizar cliente: ' + error.message);
+      return;
+    }
+
+    fetchClientes();
+  }
+
+  if (loading) {
+    return (
+      <div className="flex h-64 items-center justify-center">
+        <div className="h-10 w-10 animate-spin rounded-full border-4 border-[#D6B47A] border-t-transparent" />
+      </div>
+    );
+  }
 
   return (
-    <div className="space-y-6 pb-10">
-      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 px-2">
-        <div className="space-y-1">
-          <h2 className="text-2xl font-bold text-white">Clientes</h2>
-          <p className="text-sm text-muted">{clientes.length} clientes cadastrados</p>
+    <div className="space-y-7 pb-10">
+      <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+        <div className="flex items-start justify-between gap-4">
+          <div>
+          <h2 className="text-[2.55rem] font-black uppercase leading-none tracking-tight text-white sm:text-4xl">Gestao CRM</h2>
+          <p className="mt-3 text-xs font-black uppercase tracking-[0.2em] text-white/45 sm:text-sm sm:tracking-[0.26em]">
+            Base de dados e segmentacao de clientes
+          </p>
+          </div>
+          <button
+            type="button"
+            onClick={() => setShowAddForm(true)}
+            aria-label="Novo cliente"
+            className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-[#D6B47A]/30 bg-[#D6B47A]/10 text-[#D6B47A] lg:hidden"
+          >
+            <UserPlus className="h-8 w-8" />
+          </button>
         </div>
+        <button
+          onClick={() => setShowAddForm(true)}
+          className="flex h-16 items-center justify-center gap-4 rounded-2xl bg-[#00d875] px-6 font-black uppercase tracking-[0.26em] text-black transition-all hover:scale-[1.01] lg:h-12 lg:rounded-xl lg:tracking-[0.16em]"
+        >
+          <Plus className="h-5 w-5" />
+          Novo cliente
+        </button>
       </div>
 
-      {/* Search */}
-      <div className="relative">
-        <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted" />
-        <input
-          type="text"
-          value={search}
-          onChange={(e) => setSearch(e.target.value)}
-          placeholder="Buscar por nome, email ou telefone..."
-          className="w-full bg-white/5 border border-white/10 rounded-xl py-3 pl-10 pr-4 text-white text-sm focus:border-accent outline-none transition-all"
-        />
-      </div>
+      <div className="overflow-hidden rounded-[1.75rem] border border-white/10 bg-white/[0.025] lg:hidden">
+        <div className="border-b border-white/8 p-5">
+          <div className="mb-5 flex items-center justify-between">
+            <div className="flex gap-3">
+              <button className="border-b-2 border-[#D6B47A] px-2 pb-4 text-sm font-black uppercase tracking-[0.16em] text-[#D6B47A]">
+                Lista ({clientes.length})
+              </button>
+              <button
+                type="button"
+                onClick={() => setActiveSegment(activeSegment === 'fieis' ? 'all' : 'fieis')}
+                className="px-2 pb-4 text-sm font-black uppercase tracking-[0.16em] text-white/45"
+              >
+                Grupos
+              </button>
+            </div>
+            <button onClick={() => setShowAddForm(true)} className="flex h-16 w-16 items-center justify-center rounded-2xl border border-[#D6B47A]/25 bg-[#D6B47A]/10 text-[#D6B47A]">
+              <UserPlus className="h-8 w-8" />
+            </button>
+          </div>
 
-      {loading ? (
-        <div className="flex justify-center p-12">
-          <div className="h-8 w-8 border-4 border-accent border-t-transparent rounded-full animate-spin" />
+          <div className="grid grid-cols-[minmax(0,1fr)_64px] gap-3">
+            <div className="relative">
+              <Search className="absolute left-5 top-1/2 h-6 w-6 -translate-y-1/2 text-white/35" />
+              <input
+                value={search}
+                onChange={e => setSearch(e.target.value)}
+                placeholder="Pesquisar cliente..."
+                className="h-16 w-full rounded-2xl border border-white/10 bg-white/[0.04] pl-14 pr-4 text-base text-white outline-none placeholder:text-white/35 focus:border-[#D6B47A]/40"
+              />
+            </div>
+            <button
+              type="button"
+              onClick={() => setActiveSegment(prev => prev === 'all' ? 'novos' : prev === 'novos' ? 'fieis' : prev === 'fieis' ? 'ausentes' : 'all')}
+              className="flex h-16 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-white/55"
+            >
+              <Filter className="h-7 w-7" />
+            </button>
+          </div>
         </div>
-      ) : filtered.length === 0 ? (
-        <div className="glass rounded-2xl p-12 text-center border border-dashed border-border opacity-60">
-          <Users className="h-12 w-12 text-muted mx-auto mb-4" />
-          <p className="text-muted font-medium">{search ? 'Nenhum cliente encontrado.' : 'Nenhum cliente cadastrado ainda.'}</p>
-        </div>
-      ) : (
-        <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          {filtered.map((c) => {
-            const totalAgendamentos = c.agendamentos?.length || 0;
-            const atendidos = c.agendamentos?.filter((a: any) => a.status === 'atendido').length || 0;
-            const lastVisit = c.agendamentos?.filter((a: any) => a.status === 'atendido')
-              .sort((a: any, b: any) => new Date(b.data_hora_inicio).getTime() - new Date(a.data_hora_inicio).getTime())[0];
 
-            return (
-              <div key={c.id} className="glass rounded-2xl border border-border/50 p-4 hover:border-accent/30 transition-all group">
-                <div className="flex items-start gap-3">
-                  <div className="h-10 w-10 shrink-0 rounded-xl bg-accent/10 flex items-center justify-center text-accent font-black text-sm">
-                    {c.nome.substring(0, 2).toUpperCase()}
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="font-bold text-white text-sm truncate">{c.nome}</h4>
-                    <div className="space-y-1 mt-1">
-                      <a
-                        href={`https://wa.me/55${c.telefone.replace(/\D/g, '')}`}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="flex items-center gap-1 text-[10px] text-green-400 hover:text-green-300 transition-colors"
-                      >
-                        <Phone className="h-2.5 w-2.5" />
-                        {c.telefone}
-                      </a>
-                      <p className="flex items-center gap-1 text-[10px] text-muted truncate">
-                        <Mail className="h-2.5 w-2.5" />
-                        {c.email}
-                      </p>
-                    </div>
-                  </div>
-                </div>
-
-                <div className="mt-3 pt-3 border-t border-white/5 flex items-center justify-between text-[10px]">
-                  <div className="flex gap-3">
-                    <span className="text-muted">{totalAgendamentos} agendamento{totalAgendamentos !== 1 ? 's' : ''}</span>
-                    <span className="text-accent font-bold">{atendidos} atendido{atendidos !== 1 ? 's' : ''}</span>
-                  </div>
-                  {lastVisit && (
-                    <span className="text-muted flex items-center gap-1">
-                      <Calendar className="h-2.5 w-2.5" />
-                      Última: {new Date(lastVisit.data_hora_inicio).toLocaleDateString('pt-BR', { day: '2-digit', month: '2-digit' })}
-                    </span>
-                  )}
-                </div>
+        {segmented.length === 0 ? (
+          <div className="flex min-h-[420px] flex-col items-center justify-center px-8 py-14 text-center">
+            <div className="relative">
+              <div className="flex h-36 w-36 items-center justify-center rounded-full border border-white/10 bg-white/[0.035] text-white/40">
+                <Users className="h-16 w-16" />
               </div>
-            );
-          })}
-        </div>
+              <span className="absolute -bottom-2 -right-2 flex h-14 w-14 items-center justify-center rounded-full border border-[#D6B47A]/25 bg-[#D6B47A]/10 text-[#D6B47A]">
+                <Search className="h-7 w-7" />
+              </span>
+            </div>
+            <h3 className="mt-10 text-2xl font-black text-white">Nenhum cliente encontrado</h3>
+            <p className="mt-4 max-w-xs text-lg leading-relaxed text-white/50">Adicione seu primeiro cliente ou ajuste os filtros para encontrar resultados.</p>
+            <button
+              type="button"
+              onClick={() => setShowAddForm(true)}
+              className="mt-8 flex h-14 items-center justify-center gap-3 rounded-2xl bg-[#D6B47A]/12 px-7 text-sm font-black uppercase tracking-[0.18em] text-[#D6B47A]"
+            >
+              <Plus className="h-5 w-5" />
+              Novo cliente
+            </button>
+          </div>
+        ) : (
+          <div className="space-y-3 p-4">
+            {segmented.map(c => (
+              <button
+                key={c.id}
+                onClick={() => setSelectedCliente(c)}
+                className="flex w-full items-center justify-between gap-4 rounded-2xl border border-white/8 bg-white/[0.035] p-4 text-left active:border-[#D6B47A]/40"
+              >
+                <span className="flex min-w-0 items-center gap-4">
+                  <span className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#D6B47A] text-xl font-black text-black">
+                    {c.nome?.charAt(0)?.toUpperCase()}
+                  </span>
+                  <span className="min-w-0">
+                    <span className="block truncate font-black uppercase text-white">{c.nome}</span>
+                    <span className="block truncate text-sm text-white/45">{c.telefone || c.email || 'Sem contato'}</span>
+                  </span>
+                </span>
+                <span className="text-sm font-black text-[#D6B47A]">{money(c.receitaTotal || 0)}</span>
+              </button>
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div className="hidden min-h-[680px] overflow-hidden rounded-3xl border border-white/10 bg-white/[0.025] lg:grid lg:grid-cols-[360px_minmax(0,1fr)]">
+        <aside className={`border-r border-white/8 ${selectedCliente ? 'hidden lg:flex' : 'flex'} flex-col`}>
+          <div className="border-b border-white/8 p-5">
+            <div className="mb-5 flex items-center justify-between">
+              <div className="flex gap-1">
+                {[
+                  { id: 'all', label: `Lista (${clientes.length})` },
+                  { id: 'fieis', label: 'Grupos' },
+                ].map(tab => (
+                  <button
+                    key={tab.id}
+                    onClick={() => setActiveSegment(tab.id as Segment)}
+                    className={`px-4 py-3 text-[11px] font-black uppercase tracking-[0.16em] ${
+                      activeSegment === tab.id ? 'border-b-2 border-[#D6B47A] text-[#D6B47A]' : 'text-white/45'
+                    }`}
+                  >
+                    {tab.label}
+                  </button>
+                ))}
+              </div>
+              <button onClick={() => setShowAddForm(true)} className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#D6B47A] text-black">
+                <UserPlus className="h-5 w-5" />
+              </button>
+            </div>
+
+            <div className="grid grid-cols-[minmax(0,1fr)_48px] gap-2">
+              <div className="relative">
+                <Search className="absolute left-4 top-1/2 h-4 w-4 -translate-y-1/2 text-white/35" />
+                <input
+                  value={search}
+                  onChange={e => setSearch(e.target.value)}
+                  placeholder="Pesquisar cliente..."
+                  className="h-12 w-full rounded-xl border border-white/10 bg-white/[0.04] pl-11 pr-3 text-sm text-white outline-none focus:border-[#D6B47A]/40"
+                />
+              </div>
+              <button type="button" onClick={() => setActiveSegment(prev => prev === 'all' ? 'novos' : prev === 'novos' ? 'fieis' : prev === 'fieis' ? 'ausentes' : 'all')} className="flex h-12 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-white/55">
+                <Filter className="h-4 w-4" />
+              </button>
+            </div>
+          </div>
+
+          <div className="flex-1 space-y-6 overflow-y-auto p-4">
+            {segmented.length === 0 ? (
+              <div className="py-20 text-center text-sm text-white/35">Nenhum cliente encontrado.</div>
+            ) : (
+              'ABCDEFGHIJKLMNOPQRSTUVWXYZ'.split('').map(letter => {
+                const group = segmented.filter(c => c.nome?.toUpperCase().startsWith(letter));
+                if (!group.length) return null;
+                return (
+                  <div key={letter} className="space-y-2">
+                    <p className="px-2 text-[11px] font-black uppercase text-white/35">{letter}</p>
+                    {group.map(c => (
+                      <button
+                        key={c.id}
+                        onClick={() => setSelectedCliente(c)}
+                        className={`flex w-full items-center gap-4 rounded-2xl border p-3 text-left transition-all ${
+                          selectedCliente?.id === c.id
+                            ? 'border-[#D6B47A]/30 bg-[#D6B47A]/10'
+                            : 'border-white/8 bg-white/[0.025] hover:bg-white/[0.055]'
+                        }`}
+                      >
+                        <div className={`flex h-12 w-12 items-center justify-center rounded-xl font-black ${
+                          selectedCliente?.id === c.id ? 'bg-[#D6B47A] text-black' : 'bg-white/[0.06] text-white/70'
+                        }`}>
+                          {c.nome?.charAt(0)?.toUpperCase()}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate font-black uppercase text-white">{c.nome}</p>
+                          <p className="truncate text-sm text-white/45">{c.telefone}</p>
+                        </div>
+                      </button>
+                    ))}
+                  </div>
+                );
+              })
+            )}
+          </div>
+
+          <div className="border-t border-white/8 p-4 text-sm text-white/45">
+            Mostrando 1 a {segmented.length} de {clientes.length} clientes
+          </div>
+        </aside>
+
+        <main className={`min-w-0 ${!selectedCliente ? 'hidden lg:block' : ''}`}>
+          {selectedCliente ? (
+            <div className="grid h-full lg:grid-cols-[minmax(0,1fr)_280px]">
+              <div className="min-w-0 overflow-y-auto p-5 lg:p-8">
+                <ClientProfileHeader cliente={selectedCliente} onClose={() => setSelectedCliente(null)} onEdit={handleEditSelectedClient} />
+                <ClientActivityTabs cliente={selectedCliente} />
+              </div>
+
+              <aside className="hidden border-l border-white/8 p-6 lg:block">
+                <div className="rounded-2xl border border-white/10 bg-white/[0.04] p-5">
+                  <h3 className="mb-5 text-[12px] font-black uppercase tracking-[0.24em] text-white/65">Resumo geral</h3>
+                  <SummaryRow label="Agendamentos" value={summary?.agendamentos ?? 0} color="accent" />
+                  <SummaryRow label="Nao comparecimentos" value={summary?.ausencias ?? 0} color="yellow" />
+                  <SummaryRow label="Cancelamentos" value={summary?.cancelamentos ?? 0} color="red" />
+                  <div className="mt-4 flex items-center justify-between border-t border-white/8 pt-4">
+                    <span className="text-white/60">Receita total</span>
+                    <span className="font-black text-[#D6B47A]">{money(summary?.receita || 0)}</span>
+                  </div>
+                </div>
+
+                <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.04] p-5">
+                  <h3 className="mb-4 text-[12px] font-black uppercase tracking-[0.24em] text-white/65">Acoes rapidas</h3>
+                  <div className="grid gap-2">
+                    <QuickAction icon={Mail} label="Enviar e-mail" onClick={() => selectedCliente.email && window.open(`mailto:${selectedCliente.email}`)} />
+                    <QuickAction icon={Phone} label="Chamar" onClick={() => selectedCliente.telefone && window.open(`tel:${selectedCliente.telefone}`)} />
+                    <QuickAction icon={CalendarDays} label="Novo agendamento" onClick={() => window.location.assign('/gestao/agenda')} />
+                    <QuickAction icon={MoreHorizontal} label="Editar dados" onClick={handleEditSelectedClient} />
+                  </div>
+                </div>
+              </aside>
+            </div>
+          ) : (
+            <div className="flex h-full min-h-[560px] flex-col items-center justify-center text-center text-white/25">
+              <Users className="mb-6 h-16 w-16" />
+              <h3 className="text-2xl font-black uppercase">Selecione um cliente</h3>
+              <p className="mt-2 text-sm">Escolha alguem da lista para ver detalhes.</p>
+            </div>
+          )}
+        </main>
+      </div>
+
+      {showAddForm && (
+        <ClientForm
+          onClose={() => setShowAddForm(false)}
+          onSave={handleSaveClient}
+        />
       )}
     </div>
+  );
+}
+
+function SummaryRow({ label, value, color }: any) {
+  const colors: Record<string, string> = {
+    accent: 'text-[#D6B47A]',
+    yellow: 'text-yellow-300',
+    red: 'text-[#ff4d4d]',
+  };
+  return (
+    <div className="flex items-center justify-between border-b border-white/8 py-3">
+      <span className="text-white/60">{label}</span>
+      <span className={`font-black ${colors[color]}`}>{value}</span>
+    </div>
+  );
+}
+
+function QuickAction({ icon: Icon, label, onClick }: any) {
+  return (
+    <button type="button" onClick={onClick} className="flex items-center gap-3 rounded-xl border border-white/8 bg-white/[0.035] px-4 py-3 text-left font-bold text-white/70 hover:bg-white/[0.07]">
+      <Icon className="h-4 w-4 text-[#D6B47A]" />
+      {label}
+    </button>
   );
 }

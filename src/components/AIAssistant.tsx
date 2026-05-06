@@ -1,173 +1,147 @@
 'use client';
 
-import { useState, useRef, useEffect } from 'react';
-import { Sparkles, Send, Loader2 } from 'lucide-react';
+import { useEffect, useRef, useState } from 'react';
+import { AlertCircle, CheckCircle2, Loader2, Send, Sparkles } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 
 interface AIAssistantProps {
   onProcessed: () => void;
-  profile?: any;
+  profile?: {
+    barbearia_id?: string | null;
+    role?: string | null;
+  } | null;
 }
+
+type Feedback = {
+  kind: 'success' | 'warning' | 'error';
+  message: string;
+};
 
 export function AIAssistant({ onProcessed, profile }: AIAssistantProps) {
   const [input, setInput] = useState('');
   const [loading, setLoading] = useState(false);
+  const [feedback, setFeedback] = useState<Feedback | null>(null);
   const textareaRef = useRef<HTMLTextAreaElement>(null);
 
   useEffect(() => {
-    if (textareaRef.current) {
-      textareaRef.current.style.height = 'auto';
-      textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
-    }
+    if (!textareaRef.current) return;
+    textareaRef.current.style.height = 'auto';
+    textareaRef.current.style.height = `${textareaRef.current.scrollHeight}px`;
   }, [input]);
 
   async function handleProcess() {
-    if (!input.trim() || loading || !profile?.barbearia_id) return;
+    const texto = input.trim();
+    const barbeariaId = profile?.barbearia_id;
+
+    if (!texto || loading) return;
+
+    if (!barbeariaId) {
+      setFeedback({
+        kind: 'error',
+        message: 'Nao foi possivel identificar a barbearia do seu perfil profissional.',
+      });
+      return;
+    }
+
     setLoading(true);
+    setFeedback(null);
 
     try {
-      const lowerInput = input.toLowerCase();
-      
-      // Extract Value
-      const valueMatch = input.match(/(?:(?:R\$|R\s?\$)?\s?)?(\d+([.,]\d{1,2})?)/);
-      const value = valueMatch ? parseFloat(valueMatch[1].replace(',', '.')) : 0;
-      
-      if (value === 0) {
-        alert("Não consegui identificar o valor. Tente algo como 'Corte R$ 35 pix'.");
-        setLoading(false);
+      const { data, error } = await supabase.rpc('rpc_aida_lancamento_rapido', {
+        p_barbearia_id: barbeariaId,
+        p_texto: texto,
+      });
+
+      if (error) throw error;
+
+      const result = data as { success?: boolean; message?: string } | null;
+      const message = result?.message || 'Nao consegui processar esse lancamento.';
+
+      if (result?.success) {
+        setFeedback({ kind: 'success', message });
+        setInput('');
+        onProcessed();
         return;
       }
 
-      // Extract Method
-      let method = 'dinheiro';
-      if (lowerInput.includes('pix')) method = 'pix';
-      else if (lowerInput.includes('cartao') || lowerInput.includes('cartão') || lowerInput.includes('credito') || lowerInput.includes('debito')) method = 'cartao';
-
-      // Type Detection
-      const isExpense = /gastei|paguei|despesa|saida|comprei/.test(lowerInput);
-      const isTip = /caixinha|gorjeta/.test(lowerInput);
-
-      // Description logic
-      let desc = input.replace(valueMatch![0], '').trim();
-      desc = desc.replace(/(pix|cartao|cartão|dinheiro|no|em)/ig, '').trim() || 'Lançamento Automático';
-
-      const barbeariaId = profile.barbearia_id;
-      const today = new Date().toISOString();
-
-      if (isExpense) {
-        // Inserir Despesa
-        await supabase.from('despesas').insert({
-          barbearia_id: barbeariaId,
-          descricao: desc.substring(0, 50),
-          valor: value,
-          data: today
-        });
-        alert(`Despesa registrada: R$ ${value.toFixed(2)}`);
-      } else if (isTip) {
-        // Inserir Caixinha (Gorjeta)
-        await supabase.from('caixinhas').insert({
-          barbearia_id: barbeariaId,
-          valor: value,
-          metodo: method,
-          data: today
-        });
-        alert(`Caixinha registrada: R$ ${value.toFixed(2)} (${method})`);
-      } else {
-        // Inserir Transação de Serviço Genérica
-        const { data: servico } = await supabase.from('servicos')
-          .select('id').eq('barbearia_id', barbeariaId).limit(1).maybeSingle();
-          
-        let servicoId = servico?.id;
-        
-        // Se não tiver serviço, cria um genérico para o teste da IA
-        if (!servicoId) {
-          const { data: newServ, error: servErr } = await supabase.from('servicos').insert({
-            barbearia_id: barbeariaId,
-            nome: 'Serviço via IA',
-            valor: value
-          }).select().single();
-          if (servErr) throw new Error('Erro Serviço: ' + servErr.message);
-          servicoId = newServ?.id;
-        }
-        
-        // Vamos buscar ou criar um barbeiro que é obrigatório nas transações
-        const { data: barbeiro } = await supabase.from('barbeiros')
-          .select('id').eq('barbearia_id', barbeariaId).limit(1).maybeSingle();
-          
-        let barbeiroId = barbeiro?.id;
-        if (!barbeiroId) {
-           const { data: newBarb, error: barbErr } = await supabase.from('barbeiros').insert({
-             barbearia_id: barbeariaId,
-             nome: 'Barbeiro Autônomo'
-           }).select().single();
-           if (barbErr) throw new Error('Erro Barbeiro: ' + barbErr.message);
-           barbeiroId = newBarb?.id;
-        }
-
-        // Criar a transação
-        const { data: txData, error: txErr } = await supabase.from('transacoes').insert({
-           barbearia_id: barbeariaId,
-           cliente_nome: desc.substring(0, 50),
-           servico_id: servicoId,
-           barbeiro_id: barbeiroId,
-           valor_total: value,
-           data: today,
-        }).select().single();
-        
-        if (txErr) throw new Error('Erro Transação: ' + txErr.message);
-
-        // Criar o meio de pagamento associado à transação
-        if (txData) {
-          await supabase.from('transacao_pagamentos').insert({
-            transacao_id: txData.id,
-            valor: value,
-            metodo: method
-          });
-        }
-        alert(`Entrada registrada: R$ ${value.toFixed(2)} (${method})`);
-      }
-
-      setInput('');
-      onProcessed();
-    } catch (err: any) {
-      console.error(err);
-      alert('Erro ao processar: ' + err.message);
+      setFeedback({ kind: 'warning', message });
+    } catch (err) {
+      console.error('[AIDA] Falha ao processar lancamento:', err);
+      setFeedback({
+        kind: 'error',
+        message: 'Nao foi possivel lancar agora. Verifique se a RPC da AIDA foi aplicada no Supabase.',
+      });
     } finally {
       setLoading(false);
     }
   }
 
+  const disabled = loading || !input.trim() || !profile?.barbearia_id;
+
   return (
-    <div className="liquid-glass rounded-2xl border border-white/5 p-4 sm:p-6 transition-all">
-      <div className="mb-4 flex items-center gap-2">
-        <Sparkles className="h-5 w-5 text-accent animate-pulse" />
-        <h3 className="font-semibold text-white text-xs sm:text-sm uppercase tracking-wider">AIDA (Sua Assistente)</h3>
+    <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-4 shadow-2xl shadow-black/20 transition-all sm:p-6">
+      <div className="mb-4 flex items-center gap-3">
+        <span className="flex h-10 w-10 shrink-0 items-center justify-center rounded-2xl border border-[#D6B47A]/20 bg-[#D6B47A]/10 text-[#D6B47A]">
+          <Sparkles className="h-5 w-5" />
+        </span>
+        <div className="min-w-0">
+          <h3 className="text-xs font-black uppercase tracking-[0.18em] text-white sm:text-sm">
+            AIDA
+          </h3>
+          <p className="mt-1 text-[11px] font-bold text-white/45">
+            Lancamento rapido de atendimento
+          </p>
+        </div>
       </div>
 
-      <div className="relative group">
+      <div className="relative">
         <textarea
           ref={textareaRef}
           value={input}
-          onChange={(e) => setInput(e.target.value)}
-          placeholder="Ex: 'Corte R$ 35' ou 'Despesa R$ 10'"
+          onChange={(event) => setInput(event.target.value)}
+          onKeyDown={(event) => {
+            if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
+              event.preventDefault();
+              handleProcess();
+            }
+          }}
+          placeholder="Ex: Diego fez corte agora 30 reais"
           rows={1}
-          className="w-full resize-none overflow-hidden rounded-xl border border-white/10 bg-black/40 py-3 sm:py-4 pl-4 pr-12 text-sm text-white placeholder-muted/50 focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent transition-all"
+          className="max-h-40 min-h-14 w-full resize-none overflow-hidden rounded-2xl border border-white/10 bg-black/35 py-4 pl-4 pr-14 text-sm font-semibold leading-relaxed text-white outline-none transition-all placeholder:text-white/30 focus:border-[#D6B47A]/55 focus:ring-4 focus:ring-[#D6B47A]/10"
         />
         <button
+          type="button"
           onClick={handleProcess}
-          disabled={loading || !input.trim()}
-          className="absolute right-1.5 bottom-1.5 sm:right-2 sm:bottom-2 rounded-lg bg-accent p-2 text-black transition-all hover:scale-110 active:scale-95 disabled:opacity-30 disabled:hover:scale-100"
+          disabled={disabled}
+          className="absolute bottom-2 right-2 flex h-10 w-10 items-center justify-center rounded-xl bg-[#D6B47A] text-black transition-all hover:scale-105 active:scale-95 disabled:cursor-not-allowed disabled:opacity-35 disabled:hover:scale-100"
+          aria-label="Enviar lancamento para AIDA"
         >
-          {loading ? (
-            <Loader2 className="h-4 w-4 sm:h-5 sm:w-5 animate-spin" />
-          ) : (
-            <Send className="h-4 w-4 sm:h-5 sm:w-5" />
-          )}
+          {loading ? <Loader2 className="h-5 w-5 animate-spin" /> : <Send className="h-5 w-5" />}
         </button>
       </div>
-      
-      <p className="mt-3 text-[10px] text-muted uppercase tracking-widest text-center">
-        Digite e pressione o botão para lançar rapidamente.
+
+      {feedback && (
+        <div
+          className={[
+            'mt-4 flex gap-3 rounded-2xl border p-4 text-sm leading-relaxed',
+            feedback.kind === 'success'
+              ? 'border-[#D6B47A]/25 bg-[#D6B47A]/10 text-[#E7C992]'
+              : feedback.kind === 'warning'
+                ? 'border-yellow-400/25 bg-yellow-400/10 text-yellow-100'
+                : 'border-[#ff4d4d]/25 bg-[#ff4d4d]/10 text-[#ff9a9a]',
+          ].join(' ')}
+        >
+          {feedback.kind === 'success' ? (
+            <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+          ) : (
+            <AlertCircle className="mt-0.5 h-4 w-4 shrink-0" />
+          )}
+          <p>{feedback.message}</p>
+        </div>
+      )}
+
+      <p className="mt-3 text-center text-[10px] font-black uppercase tracking-[0.18em] text-white/35">
+        Apenas atendimentos realizados. Ex: Diego fez barba 25 pix.
       </p>
     </div>
   );

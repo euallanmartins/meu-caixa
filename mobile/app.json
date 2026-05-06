@@ -1,0 +1,27 @@
+{
+  "expo": {
+    "name": "Meu Caixa",
+    "slug": "meu-caixa-mobile",
+    "version": "1.0.0",
+    "orientation": "portrait",
+    "scheme": "meucaixa",
+    "userInterfaceStyle": "dark",
+    "newArchEnabled": true,
+    "splash": {
+      "backgroundColor": "#050505"
+    },
+    "ios": {
+      "supportsTablet": false,
+      "bundleIdentifier": "com.meucaixa.app"
+    },
+    "android": {
+      "package": "com.meucaixa.app",
+      "permissions": [
+        "INTERNET"
+      ],
+      "adaptiveIcon": {
+        "backgroundColor": "#050505"
+      }
+    }
+  }
+}
