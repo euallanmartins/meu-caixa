@@ -2,6 +2,7 @@
 'use client';
 
 import { useEffect, useMemo, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { CalendarDays, Filter, Mail, MoreHorizontal, Phone, Plus, Search, UserPlus, Users } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { ClientProfileHeader } from './crm/ClientProfileHeader';
@@ -18,6 +19,7 @@ const money = (value: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
 
 export function ClientsView({ barbeariaId }: ClientsViewProps) {
+  const router = useRouter();
   const [clientes, setClientes] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState('');
@@ -226,21 +228,13 @@ export function ClientsView({ barbeariaId }: ClientsViewProps) {
   return (
     <div className="max-w-full space-y-7 overflow-hidden pb-10">
       <div className="flex min-w-0 flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-        <div className="flex min-w-0 items-start justify-between gap-4">
+        <div className="hidden min-w-0 items-start justify-between gap-4 lg:flex">
           <div className="min-w-0">
           <h2 className="break-words text-[2.2rem] font-black uppercase leading-none tracking-tight text-white min-[390px]:text-[2.55rem] sm:text-4xl">Gestao CRM</h2>
           <p className="mt-3 text-xs font-black uppercase tracking-[0.2em] text-white/45 sm:text-sm sm:tracking-[0.26em]">
             Base de dados e segmentacao de clientes
           </p>
           </div>
-          <button
-            type="button"
-            onClick={() => setShowAddForm(true)}
-            aria-label="Novo cliente"
-            className="flex h-16 w-16 shrink-0 items-center justify-center rounded-2xl border border-[#D6B47A]/30 bg-[#D6B47A]/10 text-[#D6B47A] lg:hidden"
-          >
-            <UserPlus className="h-8 w-8" />
-          </button>
         </div>
         <button
           onClick={() => setShowAddForm(true)}
@@ -273,9 +267,6 @@ export function ClientsView({ barbeariaId }: ClientsViewProps) {
                 Grupos
               </button>
             </div>
-            <button onClick={() => setShowAddForm(true)} className="flex h-16 w-16 items-center justify-center rounded-2xl border border-[#D6B47A]/25 bg-[#D6B47A]/10 text-[#D6B47A]">
-              <UserPlus className="h-8 w-8" />
-            </button>
           </div>
 
           <div className="grid grid-cols-[minmax(0,1fr)_64px] gap-3">
@@ -455,7 +446,7 @@ export function ClientsView({ barbeariaId }: ClientsViewProps) {
                   <div className="grid gap-2">
                     <QuickAction icon={Mail} label="Enviar e-mail" onClick={() => selectedCliente.email && window.open(`mailto:${selectedCliente.email}`)} />
                     <QuickAction icon={Phone} label="Chamar" onClick={() => selectedCliente.telefone && window.open(`tel:${selectedCliente.telefone}`)} />
-                    <QuickAction icon={CalendarDays} label="Novo agendamento" onClick={() => window.location.assign('/gestao/agenda')} />
+                    <QuickAction icon={CalendarDays} label="Novo agendamento" onClick={() => router.push('/gestao/agenda')} />
                     <QuickAction icon={MoreHorizontal} label="Editar dados" onClick={handleEditSelectedClient} />
                     <QuickAction icon={MoreHorizontal} label={selectedCliente.bloqueado ? 'Liberar cliente' : 'Bloquear cliente'} onClick={handleToggleBlockSelectedClient} />
                   </div>

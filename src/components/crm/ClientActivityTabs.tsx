@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { Calendar, Image as ImageIcon, Info, Package, CreditCard, ChevronRight } from 'lucide-react';
 
 interface ActivityTabsProps {
@@ -14,6 +15,7 @@ const formatMoney = (value: number) =>
   new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(value || 0);
 
 export function ClientActivityTabs({ cliente }: ActivityTabsProps) {
+  const router = useRouter();
   const [activeTab, setActiveTab] = useState<Tab>('agendamentos');
   const [viewMode, setViewMode] = useState<'proximos' | 'anteriores'>('anteriores');
 
@@ -207,7 +209,7 @@ export function ClientActivityTabs({ cliente }: ActivityTabsProps) {
                       </div>
                       <div className="flex items-center justify-between gap-4 sm:justify-end">
                         <span className="text-sm font-black text-white">{formatMoney(Number(visit.total || 0))}</span>
-                        <button type="button" onClick={() => window.location.assign('/gestao/agenda')} className="rounded-xl border border-white/5 bg-white/5 p-2 text-white/40 shadow-lg transition-all hover:bg-accent hover:text-black">
+                        <button type="button" onClick={() => router.push('/gestao/agenda')} className="rounded-xl border border-white/5 bg-white/5 p-2 text-white/40 shadow-lg transition-all hover:bg-accent hover:text-black">
                           <ChevronRight size={18} />
                         </button>
                       </div>

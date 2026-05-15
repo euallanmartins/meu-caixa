@@ -1,3 +1,4 @@
+import Constants from 'expo-constants';
 import * as Linking from 'expo-linking';
 import { StatusBar } from 'expo-status-bar';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
@@ -84,35 +85,34 @@ function buildWebUrl(targetUrl?: string | null) {
   return WEB_URL;
 }
 
-function isExternalAllowed(url: string) {
+const INTERNAL_HOSTS = [
+  "meu-caixa-indol.vercel.app",
+  "localhost",
+  "127.0.0.1"
+];
+
+function isInternalUrl(url: string) {
   try {
     const parsed = new URL(url);
-    const host = parsed.host.toLowerCase();
-
-    return (
-      ['tel:', 'mailto:', 'whatsapp:'].includes(parsed.protocol) ||
-      host === 'wa.me' ||
-      host === 'api.whatsapp.com' ||
-      host === 'web.whatsapp.com' ||
-      host === 'instagram.com' ||
-      host === 'www.instagram.com'
-    );
+    return INTERNAL_HOSTS.includes(parsed.hostname);
   } catch {
-    return false;
+    return true;
   }
 }
 
-function canLoadInsideWebView(url: string) {
-  if (url.startsWith('about:') || url.startsWith('blob:') || url.startsWith('data:')) {
-    return true;
-  }
+function shouldOpenExternally(url: string) {
+  const lowerUrl = url.toLowerCase();
 
-  try {
-    const parsed = new URL(url);
-    return parsed.protocol === 'https:' && parsed.host === ALLOWED_HOST;
-  } catch {
-    return false;
-  }
+  return (
+    lowerUrl.startsWith("whatsapp://") ||
+    lowerUrl.startsWith("tel:") ||
+    lowerUrl.startsWith("mailto:") ||
+    lowerUrl.includes("wa.me") ||
+    lowerUrl.includes("api.whatsapp.com") ||
+    lowerUrl.includes("instagram.com") ||
+    lowerUrl.includes("maps.google.com") ||
+    lowerUrl.includes("google.com/maps")
+  );
 }
 
 function ErrorState({ onRetry }: { onRetry: () => void }) {
@@ -184,7 +184,13 @@ function ErrorState({ onRetry }: { onRetry: () => void }) {
 export default function MainWebView() {
   const insets = useSafeAreaInsets();
   const webViewRef = useRef<WebView>(null);
-  const [uri, setUri] = useState(WEB_URL);
+  
+  const initialUri = useMemo(() => {
+    const buildVersion = Constants.expoConfig?.android?.versionCode || '1';
+    return `${WEB_URL}?app=mobile&build=${buildVersion}`;
+  }, []);
+  
+  const [uri, setUri] = useState(initialUri);
   const [canGoBack, setCanGoBack] = useState(false);
   const [loading, setLoading] = useState(true);
   const [hasError, setHasError] = useState(false);
@@ -282,12 +288,22 @@ export default function MainWebView() {
   }
 
   function handleShouldStartLoad(event: WebViewNavigation) {
-    if (canLoadInsideWebView(event.url)) return true;
+    const url = event.url;
 
-    if (isExternalAllowed(event.url)) {
-      Linking.openURL(event.url).catch(() => undefined);
+    if (url.startsWith('about:') || url.startsWith('blob:') || url.startsWith('data:')) {
+      return true;
     }
 
+    if (isInternalUrl(url)) {
+      return true;
+    }
+
+    if (shouldOpenExternally(url)) {
+      Linking.openURL(url).catch(() => undefined);
+      return false;
+    }
+
+    Linking.openURL(url).catch(() => undefined);
     return false;
   }
 
@@ -362,6 +378,7 @@ export default function MainWebView() {
             domStorageEnabled
             sharedCookiesEnabled
             thirdPartyCookiesEnabled
+            cacheEnabled={false}
             pullToRefreshEnabled
             startInLoadingState
             userAgent={APP_USER_AGENT}

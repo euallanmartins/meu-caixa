@@ -3,6 +3,7 @@
 
 import { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
 import {
   ArrowRight,
   Banknote,
@@ -221,6 +222,7 @@ function Kpi({ icon: Icon, label, value, hint, color }: any) {
 }
 
 function ActionButton({ icon: Icon, title, subtitle, primary, danger, href }: any) {
+  const router = useRouter();
   const content = (
     <>
       <span className="flex items-center gap-4">
@@ -236,7 +238,7 @@ function ActionButton({ icon: Icon, title, subtitle, primary, danger, href }: an
 
   if (href) {
     return (
-      <a
+      <Link
         href={href}
         className={`flex min-h-20 min-w-0 items-center justify-between gap-4 rounded-2xl px-5 text-left transition-all hover:scale-[1.01] sm:px-6 ${
           primary
@@ -247,12 +249,12 @@ function ActionButton({ icon: Icon, title, subtitle, primary, danger, href }: an
         }`}
       >
         {content}
-      </a>
+      </Link>
     );
   }
 
   return (
-    <button type="button" onClick={() => window.location.assign('/gestao/financeiro')} className="flex min-h-20 min-w-0 items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/[0.04] px-5 text-left transition-all hover:bg-white/[0.08] sm:px-6">
+    <button type="button" onClick={() => router.push('/gestao/financeiro')} className="flex min-h-20 min-w-0 items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/[0.04] px-5 text-left transition-all hover:bg-white/[0.08] sm:px-6">
       {content}
     </button>
   );
