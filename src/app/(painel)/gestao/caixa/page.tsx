@@ -3,8 +3,10 @@
 
 import { Suspense, useEffect, useState } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
+import { ShoppingCart } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { CheckoutPOS } from '@/components/CheckoutPOS';
+import { ProfessionalMobileHeader } from '@/components/layout/ProfessionalMobileHeader';
 
 function CaixaContent() {
   const router = useRouter();
@@ -66,6 +68,12 @@ function CaixaContent() {
 
   return (
     <div className="space-y-8">
+      <ProfessionalMobileHeader
+        icon={ShoppingCart}
+        title="PDV"
+        subtitle="Venda rapida, carrinho e pagamento"
+      />
+
       <div className="hidden lg:block">
          <h2 className="text-3xl font-black text-white uppercase tracking-tight">Terminal PDV</h2>
          <p className="text-sm text-white/40 font-bold uppercase tracking-widest mt-1">Venda rápida e checkout profissional</p>

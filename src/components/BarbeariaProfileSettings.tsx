@@ -3,6 +3,8 @@
 import { useEffect, useState } from 'react';
 import { Check, Image as ImageIcon, Save, Upload } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { PUBLIC_IMAGE_ACCEPT, publicImageExtension, TEMPORARY_FAILURE_MESSAGE, validatePublicImageFile } from '@/lib/security/upload';
+import { safeImageUrl } from '@/lib/security/url';
 
 type ProfileForm = {
   nome: string;
@@ -85,7 +87,13 @@ export function BarbeariaProfileSettings({ barbeariaId }: { barbeariaId: string 
     setMessage(null);
 
     try {
-      const ext = file.name.split('.').pop() || 'jpg';
+      const fileError = validatePublicImageFile(file);
+      if (fileError) {
+        setMessage(fileError);
+        return;
+      }
+
+      const ext = publicImageExtension(file);
       const path = `barbearias/${barbeariaId}/profile/${field}-${Date.now()}.${ext}`;
       const { error } = await supabase.storage
         .from('barber-photos')
@@ -94,8 +102,8 @@ export function BarbeariaProfileSettings({ barbeariaId }: { barbeariaId: string 
       if (error) throw error;
       const { data } = supabase.storage.from('barber-photos').getPublicUrl(path);
       update(field, data.publicUrl);
-    } catch (err) {
-      setMessage(err instanceof Error ? err.message : 'Erro ao enviar imagem.');
+    } catch {
+      setMessage(TEMPORARY_FAILURE_MESSAGE);
     } finally {
       setSaving(false);
     }
@@ -187,7 +195,7 @@ export function BarbeariaProfileSettings({ barbeariaId }: { barbeariaId: string 
               onChange={event => update('ativo', event.target.checked)}
               className="h-5 w-5 accent-[#D6B47A]"
             />
-            Barbearia ativa na busca publica
+            Disponivel publicamente quando aprovada
           </label>
 
           <div className="flex flex-col gap-3 sm:flex-row">
@@ -237,17 +245,19 @@ function UploadButton({ label, onChange }: { label: string; onChange: (file: Fil
     <label className="flex h-12 cursor-pointer items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-5 text-sm font-black text-white transition-all hover:border-[#D6B47A]/30">
       <Upload className="h-4 w-4 text-[#D6B47A]" />
       {label}
-      <input type="file" accept="image/*" className="hidden" onChange={event => onChange(event.target.files?.[0] ?? null)} />
+      <input type="file" accept={PUBLIC_IMAGE_ACCEPT} className="hidden" onChange={event => onChange(event.target.files?.[0] ?? null)} />
     </label>
   );
 }
 
 function Preview({ title, url, wide }: { title: string; url: string; wide?: boolean }) {
+  const safeUrl = safeImageUrl(url, { allowBlob: false });
+
   return (
     <div className="rounded-3xl border border-white/10 bg-white/[0.035] p-4">
       <p className="mb-3 text-xs font-black uppercase tracking-[0.18em] text-white/40">{title}</p>
       <div className={`${wide ? 'aspect-[16/7]' : 'aspect-square max-w-56'} overflow-hidden rounded-2xl border border-white/10 bg-black/40`}>
-        {url ? <img src={url} alt="" className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center"><ImageIcon className="h-9 w-9 text-white/25" /></div>}
+        {safeUrl ? <img src={safeUrl} alt="" className="h-full w-full object-cover" /> : <div className="flex h-full items-center justify-center"><ImageIcon className="h-9 w-9 text-white/25" /></div>}
       </div>
     </div>
   );

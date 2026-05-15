@@ -17,10 +17,55 @@ interface Props {
 
 export function StepIndicator({ currentStep, onGoTo }: Props) {
   const visibleSteps: Step[] = [1, 2, 3, 4, 5];
+  const progress = Math.min(Math.max(currentStep, 1), 5);
 
   return (
     <div className="w-full" role="navigation" aria-label="Progresso do agendamento">
-      <div className="grid grid-cols-5">
+      <div className="rounded-3xl border border-white/10 bg-white/[0.035] p-4 shadow-xl shadow-black/20 sm:hidden">
+        <div className="flex items-center justify-between gap-4">
+          <div className="min-w-0">
+            <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#D6B47A]">
+              Etapa {progress} de 5
+            </p>
+            <p className="mt-1 break-words text-lg font-black leading-tight text-white">
+              {STEP_LABELS[progress as Step]}
+            </p>
+          </div>
+          <div className="flex shrink-0 items-center gap-1.5">
+            {visibleSteps.map(step => {
+              const isDone = currentStep > step;
+              const isActive = currentStep === step;
+              const canNavigate = isDone && onGoTo;
+
+              return (
+                <button
+                  key={step}
+                  type="button"
+                  onClick={() => canNavigate && onGoTo(step)}
+                  disabled={!canNavigate}
+                  aria-label={`${isDone ? 'Voltar para ' : ''}${STEP_LABELS[step]}`}
+                  className={`h-3 rounded-full transition-all ${
+                    isActive
+                      ? 'w-8 bg-[#D6B47A]'
+                      : isDone
+                        ? 'w-3 bg-[#D6B47A]/60'
+                        : 'w-3 bg-white/15'
+                  }`}
+                />
+              );
+            })}
+          </div>
+        </div>
+
+        <div className="mt-4 h-1.5 overflow-hidden rounded-full bg-white/10">
+          <div
+            className="h-full rounded-full bg-gradient-to-r from-[#B8935F] to-[#E0C28D] transition-all duration-500"
+            style={{ width: `${(progress / 5) * 100}%` }}
+          />
+        </div>
+      </div>
+
+      <div className="hidden grid-cols-5 sm:grid">
         {visibleSteps.map((step, idx) => {
           const isDone = currentStep > step;
           const isActive = currentStep === step;
@@ -64,7 +109,7 @@ export function StepIndicator({ currentStep, onGoTo }: Props) {
       </div>
 
       {currentStep < 6 && (
-        <p className="text-center text-[10px] font-black text-white/40 uppercase tracking-[0.28em] mt-7">
+        <p className="mt-7 hidden text-center text-[10px] font-black uppercase tracking-[0.28em] text-white/40 sm:block">
           {`Etapa ${currentStep} de 5 - ${STEP_LABELS[currentStep]}`}
         </p>
       )}

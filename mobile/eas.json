@@ -10,7 +10,7 @@
         "buildType": "apk"
       },
       "env": {
-        "EXPO_PUBLIC_WEB_URL": "https://SEU-DOMINIO-AQUI"
+        "EXPO_PUBLIC_WEB_URL": "https://meu-caixa-indol.vercel.app"
       }
     },
     "preview": {
@@ -19,8 +19,17 @@
         "buildType": "app-bundle"
       },
       "env": {
-        "EXPO_PUBLIC_WEB_URL": "https://SEU-DOMINIO-AQUI"
+        "EXPO_PUBLIC_WEB_URL": "https://meu-caixa-indol.vercel.app"
+      }
+    },
+    "production": {
+      "autoIncrement": true,
+      "env": {
+        "EXPO_PUBLIC_WEB_URL": "https://meu-caixa-indol.vercel.app"
       }
     }
+  },
+  "submit": {
+    "production": {}
   }
 }

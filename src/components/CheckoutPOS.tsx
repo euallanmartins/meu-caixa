@@ -5,7 +5,6 @@ import { useEffect, useMemo, useState } from 'react';
 import {
   ArrowRight,
   Banknote,
-  Bell,
   Bookmark,
   Briefcase,
   ChevronDown,
@@ -25,6 +24,7 @@ import {
   X,
 } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { trackAnalyticsEvent } from '@/lib/analytics/trackEvent';
 
 interface Item {
   id: string;
@@ -256,6 +256,19 @@ export function CheckoutPOS({
       setCart([]);
       setDiscount(0);
       setPaymentOpen(false);
+      void trackAnalyticsEvent({
+        barbearia_id: barbeariaId,
+        event_type: 'checkout_completed',
+        event_source: 'checkout_pos',
+        cliente_id: selectedClientId || initialAppointment?.cliente_id || null,
+        barbeiro_id: initialAppointment?.barbeiro_id || null,
+        agendamento_id: initialAppointment?.id || null,
+        metadata: {
+          total,
+          paymentMethod,
+          items: cart.length,
+        },
+      });
       onSaleCompleted?.();
       alert('Venda realizada com sucesso!');
     } catch (error) {
@@ -267,14 +280,45 @@ export function CheckoutPOS({
 
   return (
     <div className="relative min-h-[calc(100dvh-150px)] pb-16">
-      <div className="mb-6 flex items-center justify-between lg:hidden">
+      <div className="mb-6 space-y-4 lg:hidden">
+        <div className="grid grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-white/[0.04] p-1">
+          <button
+            type="button"
+            onClick={() => setMobileView('catalog')}
+            className={`flex h-12 items-center justify-center gap-2 rounded-xl text-sm font-black uppercase tracking-[0.12em] transition-all ${
+              mobileView === 'catalog' ? 'bg-[#D6B47A] text-black' : 'text-white/55'
+            }`}
+          >
+            <Package className="h-4 w-4" />
+            Itens
+          </button>
+          <button
+            type="button"
+            onClick={() => setMobileView('cart')}
+            className={`relative flex h-12 items-center justify-center gap-2 rounded-xl text-sm font-black uppercase tracking-[0.12em] transition-all ${
+              mobileView === 'cart' ? 'bg-[#D6B47A] text-black' : 'text-white/55'
+            }`}
+          >
+            <ShoppingCart className="h-4 w-4" />
+            Carrinho
+            {cart.length > 0 && (
+              <span className={`ml-1 rounded-full px-2 py-0.5 text-[10px] font-black ${
+                mobileView === 'cart' ? 'bg-black/15 text-black' : 'bg-[#D6B47A]/15 text-[#D6B47A]'
+              }`}>
+                {cart.length}
+              </span>
+            )}
+          </button>
+        </div>
+
+        <div className="flex items-center justify-between">
         <button
           type="button"
           onClick={() => setMobileView('catalog')}
-          className="flex h-16 w-16 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-[#D6B47A]"
+          className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-[#D6B47A]"
           aria-label="Ver itens"
         >
-          <ShoppingCart className="h-8 w-8" />
+          {mobileView === 'cart' ? <ArrowRight className="h-6 w-6 rotate-180" /> : <ShoppingCart className="h-7 w-7" />}
         </button>
         <div className="min-w-0 flex-1 px-4">
           <h2 className="text-2xl font-black uppercase leading-none text-white">
@@ -287,20 +331,21 @@ export function CheckoutPOS({
         <button
           type="button"
           onClick={() => setMobileView(mobileView === 'cart' ? 'catalog' : 'cart')}
-          className="relative flex h-12 w-12 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-white/65"
+          className="relative flex h-12 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-xs font-black uppercase tracking-[0.12em] text-white/75"
           aria-label={mobileView === 'cart' ? 'Voltar aos itens' : 'Abrir carrinho'}
         >
-          {mobileView === 'cart' ? <MoreVertical className="h-5 w-5" /> : <Bell className="h-5 w-5" />}
+          {mobileView === 'cart' ? 'Itens' : 'Carrinho'}
           {cart.length > 0 && (
             <span className="absolute -right-1 -top-1 rounded-full bg-[#D6B47A] px-1.5 py-0.5 text-[10px] font-black text-black">
               {cart.length}
             </span>
           )}
         </button>
+        </div>
       </div>
 
-      <div className={`${mobileView === 'catalog' ? 'block' : 'hidden'} mb-6 flex-col gap-4 xl:flex xl:flex-row xl:items-center xl:justify-between lg:flex`}>
-        <div className="relative max-w-4xl flex-1">
+      <div className={`${mobileView === 'catalog' ? 'block' : 'hidden'} mb-6 min-w-0 flex-col gap-4 lg:flex xl:flex-row xl:items-center xl:justify-between`}>
+        <div className="relative w-full min-w-0 max-w-4xl flex-1">
           <Search className="absolute left-5 top-1/2 h-5 w-5 -translate-y-1/2 text-white/45" />
           <input
             value={searchTerm}
@@ -310,13 +355,13 @@ export function CheckoutPOS({
           />
           <SlidersHorizontal className="absolute right-5 top-1/2 h-5 w-5 -translate-y-1/2 text-white/45 lg:hidden" />
         </div>
-        <div className="grid grid-cols-3 gap-2 rounded-2xl border border-white/10 bg-white/[0.04] p-1">
+        <div className="mt-3 grid min-w-0 grid-cols-3 gap-2 rounded-2xl border border-white/10 bg-white/[0.04] p-1 lg:mt-0">
           {(['all', 'servico', 'produto'] as const).map(cat => (
             <button
               key={cat}
               type="button"
               onClick={() => setActiveCategory(cat)}
-              className={`h-11 rounded-xl px-5 text-[11px] font-black uppercase tracking-[0.18em] transition-all ${
+              className={`h-11 min-w-0 rounded-xl px-2 text-[10px] font-black uppercase tracking-[0.08em] transition-all sm:px-5 sm:text-[11px] sm:tracking-[0.18em] ${
                 activeCategory === cat ? 'bg-[#D6B47A] text-black' : 'text-white/60 hover:bg-white/[0.06] hover:text-white'
               }`}
             >
@@ -326,7 +371,7 @@ export function CheckoutPOS({
         </div>
       </div>
 
-      <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_420px]">
+      <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
         <section className={`${mobileView === 'catalog' ? 'block' : 'hidden'} space-y-4 xl:block`}>
           {loading ? (
             <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
@@ -362,14 +407,14 @@ export function CheckoutPOS({
             </div>
           )}
 
-          <div className="flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.035] p-4">
-            <div className="flex items-center gap-4">
+          <div className="flex min-w-0 flex-col gap-4 rounded-2xl border border-white/10 bg-white/[0.035] p-4 sm:flex-row sm:items-center sm:justify-between">
+            <div className="flex min-w-0 items-center gap-4">
               <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#D6B47A]/10 text-[#D6B47A]">
                 <Package className="h-5 w-5" />
               </div>
-              <div>
+              <div className="min-w-0">
                 <p className="font-black text-white">Pacotes e combos</p>
-                <p className="text-sm text-white/55">Aumente o ticket medio com pacotes exclusivos.</p>
+                <p className="break-words text-sm text-white/55">Aumente o ticket medio com pacotes exclusivos.</p>
               </div>
             </div>
             <button type="button" onClick={() => { setActiveCategory('servico'); setSearchTerm('combo'); }} className="hidden rounded-xl border border-white/10 px-4 py-3 text-sm font-black text-white transition-all hover:bg-white/[0.06] sm:flex">
@@ -379,11 +424,11 @@ export function CheckoutPOS({
           </div>
         </section>
 
-        <aside className={`${mobileView === 'cart' ? 'block' : 'hidden'} overflow-hidden rounded-3xl border border-white/10 bg-white/[0.035] xl:sticky xl:top-6 xl:block`}>
-          <div className="flex items-center justify-between border-b border-white/8 p-6">
-            <div className="flex items-center gap-3">
+        <aside className={`${mobileView === 'cart' ? 'block' : 'hidden'} min-w-0 overflow-hidden rounded-3xl border border-white/10 bg-white/[0.035] xl:sticky xl:top-6 xl:block`}>
+          <div className="flex min-w-0 items-center justify-between border-b border-white/8 p-4 sm:p-6">
+            <div className="flex min-w-0 items-center gap-3">
               <ShoppingCart className="h-7 w-7 text-[#D6B47A]" />
-              <h3 className="text-xl font-black uppercase text-white">Carrinho</h3>
+              <h3 className="truncate text-xl font-black uppercase text-white">Carrinho</h3>
               <span className="rounded-full bg-[#D6B47A]/12 px-2.5 py-1 text-xs font-black text-[#D6B47A]">{cart.length}</span>
             </div>
             <button type="button" onClick={() => { setCart([]); setDiscount(0); }} title="Limpar carrinho" className="rounded-xl p-2 text-white/55 hover:bg-white/10 hover:text-white">
@@ -391,7 +436,7 @@ export function CheckoutPOS({
             </button>
           </div>
 
-          <div className="min-h-[320px] border-b border-white/8 p-6">
+          <div className="min-h-[320px] border-b border-white/8 p-4 sm:p-6">
             {cart.length === 0 ? (
               <div className="flex min-h-[300px] flex-col items-center justify-center text-center">
                 <div className="mb-6 flex h-24 w-24 items-center justify-center rounded-full border border-dashed border-white/15 text-white/30">
@@ -404,9 +449,9 @@ export function CheckoutPOS({
               <div className="space-y-3">
                 {cart.map(item => (
                   <div key={item.uniqueKey} className="rounded-2xl border border-white/8 bg-white/[0.04] p-4">
-                    <div className="flex items-start justify-between gap-3">
-                      <div>
-                        <p className="font-black text-white">{item.nome}</p>
+                    <div className="flex min-w-0 items-start justify-between gap-3">
+                      <div className="min-w-0">
+                        <p className="break-words font-black text-white">{item.nome}</p>
                         <p className="mt-1 text-sm font-bold text-[#D6B47A]">
                           {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(item.valor || 0))}
                         </p>
@@ -431,13 +476,13 @@ export function CheckoutPOS({
             )}
           </div>
 
-          <div className="space-y-5 p-6">
+          <div className="space-y-5 p-4 sm:p-6">
             {cart.length > 0 && (
               <button
                 type="button"
-                onClick={() => setMobileView('catalog')}
-                className="flex h-14 w-full items-center justify-center gap-3 rounded-2xl border border-dashed border-white/15 text-sm font-bold text-white/70 transition-all hover:border-[#D6B47A]/40 hover:text-[#D6B47A] xl:hidden"
-              >
+              onClick={() => setMobileView('catalog')}
+              className="flex h-14 w-full items-center justify-center gap-3 rounded-2xl border border-dashed border-white/15 text-sm font-bold text-white/70 transition-all hover:border-[#D6B47A]/40 hover:text-[#D6B47A] xl:hidden"
+            >
                 <Plus className="h-5 w-5 text-[#D6B47A]" />
                 Adicionar mais itens
               </button>
@@ -447,9 +492,9 @@ export function CheckoutPOS({
               onClick={() => setIsSearchingClient(true)}
               className="flex w-full items-center justify-between rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-left"
             >
-              <span className="flex items-center gap-3">
+              <span className="flex min-w-0 items-center gap-3">
                 <User className="h-5 w-5 text-white/55" />
-                <span className="font-bold text-white">{selectedClientName || 'Cliente nao informado'}</span>
+                <span className="min-w-0 truncate font-bold text-white">{selectedClientName || 'Cliente nao informado'}</span>
               </span>
               <ChevronDown className="h-4 w-4 text-white/45" />
             </button>
@@ -463,9 +508,9 @@ export function CheckoutPOS({
                 <span>Desconto</span>
                 <button type="button" onClick={handleDiscount}>{discount > 0 ? new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(discount) : 'Adicionar desconto'}</button>
               </div>
-              <div className="flex items-end justify-between pt-3">
+              <div className="flex min-w-0 flex-wrap items-end justify-between gap-3 pt-3">
                 <span className="text-lg font-black uppercase text-white">Total</span>
-                <span className="text-4xl font-black text-white">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(total)}</span>
+                <span className="break-words text-3xl font-black text-white sm:text-4xl">{new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(total)}</span>
               </div>
             </div>
 
@@ -473,7 +518,7 @@ export function CheckoutPOS({
               type="button"
               onClick={() => setPaymentOpen(true)}
               disabled={cart.length === 0}
-              className="flex h-14 w-full items-center justify-center gap-3 rounded-xl bg-[#00d875] font-black uppercase tracking-[0.14em] text-black transition-all hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-40"
+              className="flex h-14 w-full items-center justify-center gap-3 rounded-xl bg-gradient-to-r from-[#B8935F] to-[#E0C28D] font-black uppercase tracking-[0.14em] text-black transition-all hover:scale-[1.01] disabled:cursor-not-allowed disabled:opacity-40"
             >
               Avancar para pagamento
               <ArrowRight className="h-5 w-5" />
@@ -512,8 +557,8 @@ export function CheckoutPOS({
       </footer>
 
       {paymentOpen && (
-        <div className="fixed inset-0 z-[100] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-3xl border border-white/10 bg-[#111] p-6 shadow-2xl">
+        <div className="fixed inset-0 z-[100] flex items-end justify-center overflow-y-auto bg-black/80 p-3 backdrop-blur-sm sm:items-center sm:p-4">
+          <div className="max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-3xl border border-white/10 bg-[#111] p-5 shadow-2xl sm:p-6">
             <div className="mb-6 flex items-center justify-between">
               <div>
                 <h3 className="text-2xl font-black text-white">Pagamento</h3>
@@ -548,7 +593,7 @@ export function CheckoutPOS({
             <button
               onClick={handleCheckout}
               disabled={processing}
-              className="mt-6 h-14 w-full rounded-xl bg-[#00d875] font-black uppercase tracking-[0.16em] text-black transition-all hover:scale-[1.01] disabled:opacity-50"
+              className="mt-6 h-14 w-full rounded-xl bg-gradient-to-r from-[#B8935F] to-[#E0C28D] font-black uppercase tracking-[0.16em] text-black transition-all hover:scale-[1.01] disabled:opacity-50"
             >
               {processing ? 'Finalizando...' : 'Confirmar pagamento'}
             </button>
@@ -557,8 +602,8 @@ export function CheckoutPOS({
       )}
 
       {isSearchingClient && (
-        <div className="fixed inset-0 z-[110] flex items-center justify-center bg-black/80 p-4 backdrop-blur-sm">
-          <div className="w-full max-w-lg rounded-3xl border border-white/10 bg-[#111] p-6 shadow-2xl">
+        <div className="fixed inset-0 z-[110] flex items-end justify-center overflow-y-auto bg-black/80 p-3 backdrop-blur-sm sm:items-center sm:p-4">
+          <div className="max-h-[92dvh] w-full max-w-lg overflow-y-auto rounded-3xl border border-white/10 bg-[#111] p-5 shadow-2xl sm:p-6">
             <div className="mb-5 flex items-center justify-between">
               <h3 className="text-xl font-black text-white">Buscar cliente</h3>
               <button onClick={() => setIsSearchingClient(false)} className="rounded-xl p-2 text-white/55 hover:bg-white/10">

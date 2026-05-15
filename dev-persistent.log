@@ -1,0 +1,8 @@
+> next dev
+> meucaixa@0.1.0 dev
+? Next.js 16.2.3 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.1.10:3000
+- Environments: .env.local
+? Ready in 405ms
+ HEAD / 200 in 465ms (next.js: 237ms, application-code: 228ms)

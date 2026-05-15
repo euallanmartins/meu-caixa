@@ -7,21 +7,79 @@
     "scheme": "meucaixa",
     "userInterfaceStyle": "dark",
     "newArchEnabled": true,
+    "icon": "./assets/icon.png",
     "splash": {
-      "backgroundColor": "#050505"
+      "image": "./assets/splash-icon.png",
+      "resizeMode": "contain",
+      "backgroundColor": "#060606"
+    },
+    "plugins": [
+      "expo-router",
+      [
+        "expo-notifications",
+        {
+          "icon": "./assets/notification-icon.png",
+          "color": "#d6b47a",
+          "defaultChannel": "agendamentos"
+        }
+      ]
+    ],
+    "extra": {
+      "webUrl": "https://meu-caixa-indol.vercel.app",
+      "allowedHost": "meu-caixa-indol.vercel.app",
+      "eas": {
+        "projectId": "52b9d6ea-570b-4ccb-b6d3-ed8e677b7e82"
+      },
+      "router": {}
     },
     "ios": {
       "supportsTablet": false,
-      "bundleIdentifier": "com.meucaixa.app"
+      "bundleIdentifier": "com.meucaixa.app",
+      "associatedDomains": [
+        "applinks:meu-caixa-indol.vercel.app"
+      ],
+      "infoPlist": {
+        "NSCameraUsageDescription": "Permita acesso a camera para enviar fotos no Meu Caixa.",
+        "NSPhotoLibraryUsageDescription": "Permita acesso as fotos para uploads no Meu Caixa.",
+        "NSPhotoLibraryAddUsageDescription": "Permita salvar imagens geradas pelo Meu Caixa na sua biblioteca.",
+        "NSUserNotificationsUsageDescription": "Permita notificacoes para receber avisos de agendamento."
+      }
     },
     "android": {
       "package": "com.meucaixa.app",
       "permissions": [
-        "INTERNET"
+        "INTERNET",
+        "CAMERA",
+        "READ_MEDIA_IMAGES",
+        "POST_NOTIFICATIONS"
       ],
       "adaptiveIcon": {
-        "backgroundColor": "#050505"
-      }
-    }
+        "foregroundImage": "./assets/adaptive-icon.png",
+        "backgroundColor": "#060606"
+      },
+      "intentFilters": [
+        {
+          "action": "VIEW",
+          "autoVerify": true,
+          "data": [
+            {
+              "scheme": "https",
+              "host": "meu-caixa-indol.vercel.app"
+            },
+            {
+              "scheme": "meucaixa"
+            }
+          ],
+          "category": [
+            "BROWSABLE",
+            "DEFAULT"
+          ]
+        }
+      ]
+    },
+    "updates": {
+      "fallbackToCacheTimeout": 0
+    },
+    "owner": "euallanmartinss"
   }
 }

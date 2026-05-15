@@ -3,9 +3,12 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { UserCheck } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { BarbersView } from '@/components/BarbersView';
 import { useDashboardData } from '@/hooks/useDashboardData';
+import { ProfessionalMobileHeader } from '@/components/layout/ProfessionalMobileHeader';
+import { TeamInvitesPanel } from '@/components/team/TeamInvitesPanel';
 
 export default function EquipePage() {
   const router = useRouter();
@@ -69,12 +72,25 @@ export default function EquipePage() {
 
   return (
     <div className="animate-in fade-in duration-500">
+      <ProfessionalMobileHeader
+        icon={UserCheck}
+        title="Equipe"
+        subtitle="Profissionais, comissoes e acessos"
+      />
+
       <BarbersView 
         barbers={barbers} 
         barbeariaId={profile?.barbearia_id} 
         refreshData={refreshData}
         loading={dataLoading}
         stats={stats}
+        accessPanel={(
+          <TeamInvitesPanel
+            barbeariaId={profile?.barbearia_id}
+            currentRole={profile?.role}
+            barbers={barbers}
+          />
+        )}
       />
     </div>
   );

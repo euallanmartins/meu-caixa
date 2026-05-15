@@ -16,8 +16,9 @@ import {
   subMonths,
 } from 'date-fns';
 import { ptBR } from 'date-fns/locale';
-import { Bell, CalendarDays, ChevronLeft, ChevronRight, Clock, Loader2, Mail, Star, Timer, MessageCircle } from 'lucide-react';
-import type { SlotInfo } from '@/hooks/useAgendamento';
+import { Bell, CalendarDays, ChevronLeft, ChevronRight, Clock, Loader2, Star, Timer } from 'lucide-react';
+import type { ReminderChannel, SlotInfo } from '@/hooks/useAgendamento';
+import { ReminderChannelSelector } from './ReminderChannelSelector';
 import { SlotGrid } from './SlotGrid';
 
 interface Props {
@@ -27,8 +28,13 @@ interface Props {
   loading: boolean;
   duracaoTotal: number;
   barbeiroId: string | null;
+  reminderChannel: ReminderChannel;
   onSelectData: (d: Date) => void;
   onSelectHorario: (h: string) => void;
+  onReminderChannelChange: (channel: ReminderChannel) => void;
+  onJoinWaitlist?: () => void;
+  waitlistLoading?: boolean;
+  waitlistMessage?: string | null;
   onVoltar: () => void;
   onContinuar: () => void;
 }
@@ -41,8 +47,13 @@ export function StepHorario({
   slots,
   loading,
   duracaoTotal,
+  reminderChannel,
   onSelectData,
   onSelectHorario,
+  onReminderChannelChange,
+  onJoinWaitlist,
+  waitlistLoading,
+  waitlistMessage,
   onVoltar,
   onContinuar,
 }: Props) {
@@ -189,7 +200,14 @@ export function StepHorario({
               ))}
             </div>
           ) : (
-            <SlotGrid slots={slots} horarioSelecionado={horario} onSelect={onSelectHorario} />
+            <SlotGrid
+              slots={slots}
+              horarioSelecionado={horario}
+              onSelect={onSelectHorario}
+              onJoinWaitlist={onJoinWaitlist}
+              waitlistLoading={waitlistLoading}
+              waitlistMessage={waitlistMessage}
+            />
           )}
 
           {horario && (
@@ -212,22 +230,11 @@ export function StepHorario({
                 <p className="mt-1 text-sm text-white/55">Enviaremos uma confirmacao e lembrete do seu agendamento.</p>
               </div>
             </div>
-            <div className="grid gap-2">
-              <div className="flex items-center justify-between rounded-xl border border-[#D6B47A]/30 bg-[#D6B47A]/8 px-4 py-3">
-                <span className="flex items-center gap-3 font-black text-white">
-                  <MessageCircle className="h-5 w-5 text-[#D6B47A]" />
-                  WhatsApp
-                </span>
-                <span className="h-4 w-4 rounded-full border-4 border-[#D6B47A]" />
-              </div>
-              <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
-                <span className="flex items-center gap-3 font-black text-white/80">
-                  <Mail className="h-5 w-5 text-white/45" />
-                  E-mail
-                </span>
-                <span className="h-4 w-4 rounded-full border-2 border-white/35" />
-              </div>
-            </div>
+            <ReminderChannelSelector
+              name="horario-reminder-channel"
+              value={reminderChannel}
+              onChange={onReminderChannelChange}
+            />
           </div>
 
           <p className="mt-4 text-sm text-white/45">

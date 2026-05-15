@@ -129,7 +129,7 @@ export function DailyCashView({ transactions, barbers, currentSession, barbearia
           type="button"
           onClick={handleCloseSession}
           disabled={closing}
-          className="mx-auto mt-6 flex h-14 w-full max-w-sm items-center justify-center gap-4 rounded-xl bg-[#00c96d] font-black uppercase tracking-[0.18em] text-black transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
+          className="mx-auto mt-6 flex h-14 w-full max-w-sm items-center justify-center gap-4 rounded-xl bg-[#D6B47A] font-black uppercase tracking-[0.18em] text-black transition-all hover:scale-[1.01] active:scale-[0.99] disabled:opacity-50"
         >
           <Lock className="h-5 w-5" />
           {closing ? 'Fechando...' : 'Fechar caixa do dia'}
@@ -143,7 +143,7 @@ export function DailyCashView({ transactions, barbers, currentSession, barbearia
         <Kpi icon={Star} label="Gorjetas acumuladas" value={formatCurrency(totalTips)} hint={`${tips.length} gorjetas`} color="gold" />
       </section>
 
-      <section className="grid gap-5 xl:grid-cols-[minmax(320px,0.95fr)_minmax(0,2fr)]">
+      <section className="grid min-w-0 gap-5 xl:grid-cols-[minmax(0,0.95fr)_minmax(0,2fr)]">
         <div className="space-y-5">
           <div className="rounded-2xl border border-[#D6B47A]/20 bg-[#D6B47A]/5 p-6">
             <div className="mb-4 flex items-center justify-between">
@@ -236,14 +236,23 @@ function ActionButton({ icon: Icon, title, subtitle, primary, danger, href }: an
 
   if (href) {
     return (
-      <a href={href} className="flex min-h-20 items-center justify-between rounded-2xl bg-[#00c96d] px-6 text-left transition-all hover:scale-[1.01]">
+      <a
+        href={href}
+        className={`flex min-h-20 min-w-0 items-center justify-between gap-4 rounded-2xl px-5 text-left transition-all hover:scale-[1.01] sm:px-6 ${
+          primary
+            ? 'bg-[#D6B47A]'
+            : danger
+              ? 'border border-[#ff4d4d]/20 bg-[#ff4d4d]/10'
+              : 'border border-white/10 bg-white/[0.04] hover:bg-white/[0.08]'
+        }`}
+      >
         {content}
       </a>
     );
   }
 
   return (
-    <button type="button" onClick={() => window.location.assign('/gestao/financeiro')} className="flex min-h-20 items-center justify-between rounded-2xl border border-white/10 bg-white/[0.04] px-6 text-left transition-all hover:bg-white/[0.08]">
+    <button type="button" onClick={() => window.location.assign('/gestao/financeiro')} className="flex min-h-20 min-w-0 items-center justify-between gap-4 rounded-2xl border border-white/10 bg-white/[0.04] px-5 text-left transition-all hover:bg-white/[0.08] sm:px-6">
       {content}
     </button>
   );

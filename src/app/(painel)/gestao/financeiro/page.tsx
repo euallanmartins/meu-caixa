@@ -3,9 +3,11 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { TrendingUp } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { DailyCashView } from '@/components/DailyCashView';
 import { useDashboardData } from '@/hooks/useDashboardData';
+import { ProfessionalMobileHeader } from '@/components/layout/ProfessionalMobileHeader';
 
 export default function FinanceiroPage() {
   const router = useRouter();
@@ -54,6 +56,12 @@ export default function FinanceiroPage() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
+      <ProfessionalMobileHeader
+        icon={TrendingUp}
+        title="Financeiro"
+        subtitle="Caixa, comissoes e historico"
+      />
+
       <div className="hidden lg:block">
          <h2 className="text-3xl font-black text-white uppercase tracking-tight">Gestão Financeira</h2>
          <p className="text-sm text-white/40 font-bold uppercase tracking-widest mt-1">Fluxo de caixa, comissões e histórico</p>

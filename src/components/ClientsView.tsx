@@ -26,19 +26,51 @@ export function ClientsView({ barbeariaId }: ClientsViewProps) {
   const [showAddForm, setShowAddForm] = useState(false);
 
   async function fetchClientes() {
-    if (!barbeariaId) return;
+    if (!barbeariaId) {
+      setClientes([]);
+      setSelectedCliente(null);
+      setLoading(false);
+      return;
+    }
+
     setLoading(true);
     try {
-      const { data, error } = await supabase
-        .from('clientes')
-        .select(`
+      const clientesQuery = (includeBarberPhoto: boolean) =>
+        supabase
+          .from('clientes')
+          .select(includeBarberPhoto ? `
           *,
           agendamentos(
             id,
+            idempotency_key,
             status,
             data_hora_inicio,
+            data_hora_fim,
+            valor_estimado,
+            observacoes,
             servicos(nome, valor, duracao_minutos),
             barbeiros(nome, foto_url, destaque_label)
+          ),
+            transacoes(
+              id,
+              valor_total,
+              data,
+            servicos(nome),
+            transacao_pagamentos(metodo, valor),
+            venda_produtos(quantidade, produtos(nome))
+          )
+        ` : `
+          *,
+          agendamentos(
+            id,
+            idempotency_key,
+            status,
+            data_hora_inicio,
+            data_hora_fim,
+            valor_estimado,
+            observacoes,
+            servicos(nome, valor, duracao_minutos),
+            barbeiros(nome, destaque_label)
           ),
           transacoes(
             id,
@@ -49,8 +81,16 @@ export function ClientsView({ barbeariaId }: ClientsViewProps) {
             venda_produtos(quantidade, produtos(nome))
           )
         `)
-        .eq('barbearia_id', barbeariaId)
-        .order('nome', { ascending: true });
+          .eq('barbearia_id', barbeariaId)
+          .order('nome', { ascending: true });
+
+      let { data, error } = await clientesQuery(true);
+      if (error?.code === '42703') {
+        console.warn('Fallback clientes sem barbeiros.foto_url:', error);
+        const fallback = await clientesQuery(false);
+        data = fallback.data;
+        error = fallback.error;
+      }
 
       if (error) throw error;
 
@@ -60,7 +100,7 @@ export function ClientsView({ barbeariaId }: ClientsViewProps) {
       }));
 
       setClientes(processed);
-      setSelectedCliente((prev: any) => prev ? processed.find(c => c.id === prev.id) || processed[0] || null : processed[0] || null);
+      setSelectedCliente((prev: any) => prev ? processed.find(c => c.id === prev.id) || null : null);
     } catch (error) {
       console.error('Error fetching clients:', error);
     } finally {
@@ -149,6 +189,32 @@ export function ClientsView({ barbeariaId }: ClientsViewProps) {
     fetchClientes();
   }
 
+  async function handleToggleBlockSelectedClient() {
+    if (!selectedCliente || !barbeariaId) return;
+    const shouldBlock = !selectedCliente.bloqueado;
+    const motivo = shouldBlock ? window.prompt('Motivo interno do bloqueio', selectedCliente.motivo_bloqueio || '') : null;
+    if (shouldBlock && motivo === null) return;
+
+    const { data: userData } = await supabase.auth.getUser();
+    const { error } = await supabase
+      .from('clientes')
+      .update({
+        bloqueado: shouldBlock,
+        motivo_bloqueio: shouldBlock ? motivo || null : null,
+        bloqueado_em: shouldBlock ? new Date().toISOString() : null,
+        bloqueado_por: shouldBlock ? userData.user?.id ?? null : null,
+      })
+      .eq('id', selectedCliente.id)
+      .eq('barbearia_id', barbeariaId);
+
+    if (error) {
+      alert('Erro ao atualizar bloqueio: ' + error.message);
+      return;
+    }
+
+    fetchClientes();
+  }
+
   if (loading) {
     return (
       <div className="flex h-64 items-center justify-center">
@@ -158,11 +224,11 @@ export function ClientsView({ barbeariaId }: ClientsViewProps) {
   }
 
   return (
-    <div className="space-y-7 pb-10">
-      <div className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-        <div className="flex items-start justify-between gap-4">
-          <div>
-          <h2 className="text-[2.55rem] font-black uppercase leading-none tracking-tight text-white sm:text-4xl">Gestao CRM</h2>
+    <div className="max-w-full space-y-7 overflow-hidden pb-10">
+      <div className="flex min-w-0 flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+        <div className="flex min-w-0 items-start justify-between gap-4">
+          <div className="min-w-0">
+          <h2 className="break-words text-[2.2rem] font-black uppercase leading-none tracking-tight text-white min-[390px]:text-[2.55rem] sm:text-4xl">Gestao CRM</h2>
           <p className="mt-3 text-xs font-black uppercase tracking-[0.2em] text-white/45 sm:text-sm sm:tracking-[0.26em]">
             Base de dados e segmentacao de clientes
           </p>
@@ -178,17 +244,24 @@ export function ClientsView({ barbeariaId }: ClientsViewProps) {
         </div>
         <button
           onClick={() => setShowAddForm(true)}
-          className="flex h-16 items-center justify-center gap-4 rounded-2xl bg-[#00d875] px-6 font-black uppercase tracking-[0.26em] text-black transition-all hover:scale-[1.01] lg:h-12 lg:rounded-xl lg:tracking-[0.16em]"
+          className="flex h-16 items-center justify-center gap-4 rounded-2xl bg-[#D6B47A] px-6 font-black uppercase tracking-[0.14em] text-black transition-all hover:scale-[1.01] lg:h-12 lg:rounded-xl lg:tracking-[0.16em]"
         >
           <Plus className="h-5 w-5" />
           Novo cliente
         </button>
       </div>
 
-      <div className="overflow-hidden rounded-[1.75rem] border border-white/10 bg-white/[0.025] lg:hidden">
+      {selectedCliente && (
+        <div className="overflow-hidden rounded-[1.75rem] border border-white/10 bg-white/[0.025] lg:hidden">
+          <ClientProfileHeader cliente={selectedCliente} onClose={() => setSelectedCliente(null)} onEdit={handleEditSelectedClient} />
+          <ClientActivityTabs cliente={selectedCliente} />
+        </div>
+      )}
+
+      <div className={`${selectedCliente ? 'hidden' : ''} overflow-hidden rounded-[1.75rem] border border-white/10 bg-white/[0.025] lg:hidden`}>
         <div className="border-b border-white/8 p-5">
           <div className="mb-5 flex items-center justify-between">
-            <div className="flex gap-3">
+            <div className="flex min-w-0 gap-3 overflow-x-auto pr-2">
               <button className="border-b-2 border-[#D6B47A] px-2 pb-4 text-sm font-black uppercase tracking-[0.16em] text-[#D6B47A]">
                 Lista ({clientes.length})
               </button>
@@ -261,6 +334,9 @@ export function ClientsView({ barbeariaId }: ClientsViewProps) {
                   <span className="min-w-0">
                     <span className="block truncate font-black uppercase text-white">{c.nome}</span>
                     <span className="block truncate text-sm text-white/45">{c.telefone || c.email || 'Sem contato'}</span>
+                    <span className="mt-1 block text-xs font-bold text-white/35">
+                      {(c.agendamentos?.length || 0)} agendamento{(c.agendamentos?.length || 0) === 1 ? '' : 's'}
+                    </span>
                   </span>
                 </span>
                 <span className="text-sm font-black text-[#D6B47A]">{money(c.receitaTotal || 0)}</span>
@@ -270,7 +346,7 @@ export function ClientsView({ barbeariaId }: ClientsViewProps) {
         )}
       </div>
 
-      <div className="hidden min-h-[680px] overflow-hidden rounded-3xl border border-white/10 bg-white/[0.025] lg:grid lg:grid-cols-[360px_minmax(0,1fr)]">
+      <div className="hidden min-h-[680px] overflow-hidden rounded-3xl border border-white/10 bg-white/[0.025] lg:grid lg:grid-cols-[minmax(300px,360px)_minmax(0,1fr)]">
         <aside className={`border-r border-white/8 ${selectedCliente ? 'hidden lg:flex' : 'flex'} flex-col`}>
           <div className="border-b border-white/8 p-5">
             <div className="mb-5 flex items-center justify-between">
@@ -338,6 +414,7 @@ export function ClientsView({ barbeariaId }: ClientsViewProps) {
                         </div>
                         <div className="min-w-0">
                           <p className="truncate font-black uppercase text-white">{c.nome}</p>
+                          {c.bloqueado && <p className="text-[10px] font-black uppercase tracking-widest text-[#ff8a8a]">Bloqueado</p>}
                           <p className="truncate text-sm text-white/45">{c.telefone}</p>
                         </div>
                       </button>
@@ -380,6 +457,7 @@ export function ClientsView({ barbeariaId }: ClientsViewProps) {
                     <QuickAction icon={Phone} label="Chamar" onClick={() => selectedCliente.telefone && window.open(`tel:${selectedCliente.telefone}`)} />
                     <QuickAction icon={CalendarDays} label="Novo agendamento" onClick={() => window.location.assign('/gestao/agenda')} />
                     <QuickAction icon={MoreHorizontal} label="Editar dados" onClick={handleEditSelectedClient} />
+                    <QuickAction icon={MoreHorizontal} label={selectedCliente.bloqueado ? 'Liberar cliente' : 'Bloquear cliente'} onClick={handleToggleBlockSelectedClient} />
                   </div>
                 </div>
               </aside>

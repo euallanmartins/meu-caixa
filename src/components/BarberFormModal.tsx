@@ -4,6 +4,8 @@
 import { useState, useEffect } from 'react';
 import { X, User, Check, AlertCircle, Upload, Image as ImageIcon } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { PUBLIC_IMAGE_ACCEPT, publicImageExtension, TEMPORARY_FAILURE_MESSAGE, validatePublicImageFile } from '@/lib/security/upload';
+import { safeImageUrl } from '@/lib/security/url';
 
 interface BarberFormModalProps {
   isOpen: boolean;
@@ -99,8 +101,9 @@ export function BarberFormModal({ isOpen, onClose, onSuccess, barbeariaId, editi
   async function handlePhotoUpload(file: File | null) {
     if (!file || loading) return;
 
-    if (!file.type.startsWith('image/')) {
-      setError('Selecione uma imagem valida.');
+    const fileError = validatePublicImageFile(file);
+    if (fileError) {
+      setError(fileError);
       return;
     }
 
@@ -108,8 +111,8 @@ export function BarberFormModal({ isOpen, onClose, onSuccess, barbeariaId, editi
     setError(null);
 
     try {
-      const ext = file.name.split('.').pop() || 'jpg';
-      const safeName = `${barbeariaId}/${editingBarber?.id || crypto.randomUUID()}-${Date.now()}.${ext}`;
+      const ext = publicImageExtension(file);
+      const safeName = `barbearias/${barbeariaId}/profissionais/${editingBarber?.id || crypto.randomUUID()}-${Date.now()}.${ext}`;
       const { error: uploadError } = await supabase.storage
         .from('barber-photos')
         .upload(safeName, file, { cacheControl: '3600', upsert: true });
@@ -120,7 +123,7 @@ export function BarberFormModal({ isOpen, onClose, onSuccess, barbeariaId, editi
       setFotoUrl(data.publicUrl);
     } catch (err: any) {
       console.error('Erro ao enviar foto:', err);
-      setError(err.message || 'Erro ao enviar a foto. Verifique se a migration do bucket foi aplicada.');
+      setError(err?.message?.includes('mime') ? 'Formato nao permitido. Envie uma imagem JPG, PNG ou WEBP.' : TEMPORARY_FAILURE_MESSAGE);
     } finally {
       setLoading(false);
     }
@@ -167,8 +170,8 @@ export function BarberFormModal({ isOpen, onClose, onSuccess, barbeariaId, editi
 
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-[112px_minmax(0,1fr)]">
             <div className="h-28 w-28 overflow-hidden rounded-2xl border border-border bg-white/5 flex items-center justify-center">
-              {fotoUrl ? (
-                <img src={fotoUrl} alt="" className="h-full w-full object-cover" />
+              {safeImageUrl(fotoUrl, { allowBlob: false }) ? (
+                <img src={safeImageUrl(fotoUrl, { allowBlob: false })} alt="" className="h-full w-full object-cover" />
               ) : (
                 <ImageIcon className="h-8 w-8 text-muted" />
               )}
@@ -189,7 +192,7 @@ export function BarberFormModal({ isOpen, onClose, onSuccess, barbeariaId, editi
                 Enviar foto
                 <input
                   type="file"
-                  accept="image/*"
+                  accept={PUBLIC_IMAGE_ACCEPT}
                   className="hidden"
                   onChange={(e) => handlePhotoUpload(e.target.files?.[0] ?? null)}
                 />

@@ -3,12 +3,14 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Settings } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { ServicesView } from '@/components/ServicesView';
 import { ProductsView } from '@/components/ProductsView';
 import { OpeningHoursView } from '@/components/OpeningHoursView';
 import { BarbeariaProfileSettings } from '@/components/BarbeariaProfileSettings';
 import { BarbeariaPortfolioManager } from '@/components/BarbeariaPortfolioManager';
+import { ProfessionalMobileHeader } from '@/components/layout/ProfessionalMobileHeader';
 
 type ConfigTab = 'perfil' | 'portfolio' | 'servicos' | 'produtos' | 'horarios';
 
@@ -61,7 +63,13 @@ export default function ConfiguracoesPage() {
 
   return (
     <div className="space-y-8 animate-in fade-in duration-500">
-      <div>
+      <ProfessionalMobileHeader
+        icon={Settings}
+        title="Ajustes"
+        subtitle="Perfil publico, servicos e horarios"
+      />
+
+      <div className="hidden lg:block">
         <h2 className="text-3xl font-black uppercase tracking-tight text-white">Configuracoes</h2>
         <p className="mt-1 text-sm font-bold uppercase tracking-widest text-white/40">
           Gerencie perfil publico, catalogo, estoque e horarios da barbearia

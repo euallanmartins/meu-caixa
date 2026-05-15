@@ -1,11 +1,56 @@
 ﻿'use client';
 
-import { useState } from 'react';
+import { Suspense, useEffect, useMemo, useState } from 'react';
 import { Eye, EyeOff, Lock, Mail, Scissors } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
-import { useRouter } from 'next/navigation';
+import { useRouter, useSearchParams } from 'next/navigation';
 
-export default function LoginPage() {
+const PLATFORM_ROLES = new Set(['platform_admin', 'super_admin']);
+const PROFESSIONAL_ROLES = new Set(['owner', 'admin', 'proprietario', 'barbeiro', 'funcionario', 'gerente', ...PLATFORM_ROLES]);
+const ADMIN_ROLES = new Set(['owner', 'admin', 'proprietario', 'gerente', ...PLATFORM_ROLES]);
+const AUTH_TIMEOUT_MS = 15000;
+
+type LoginResponse = {
+  userId?: string;
+  profile?: {
+    role?: string | null;
+    barbearia_id?: string | null;
+    barbeiro_id?: string | null;
+  } | null;
+  hasClientAccount?: boolean;
+  error?: string;
+};
+
+function safeRedirect(value: string | null) {
+  if (!value) return null;
+  if (value === '/admin/plataforma') return value;
+  return value.startsWith('/convite/equipe?token=') || value.startsWith('/convite/proprietario?token=') ? value : null;
+}
+
+function LoginLoading() {
+  return (
+    <div className="flex min-h-screen items-center justify-center bg-background text-white">
+      <div className="h-10 w-10 animate-spin rounded-full border-4 border-accent border-t-transparent" />
+    </div>
+  );
+}
+
+function withTimeout<T>(promise: PromiseLike<T>, label: string, ms = AUTH_TIMEOUT_MS) {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => {
+      timer = setTimeout(() => reject(new Error(`${label} demorou demais para responder.`)), ms);
+    }),
+  ]).finally(() => {
+    if (timer) clearTimeout(timer);
+  });
+}
+
+function LoginInner() {
+  const searchParams = useSearchParams();
+  const redirectTo = useMemo(() => safeRedirect(searchParams.get('redirectTo')), [searchParams]);
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [showPassword, setShowPassword] = useState(false);
@@ -13,49 +58,107 @@ export default function LoginPage() {
   const [error, setError] = useState<string | null>(null);
   const router = useRouter();
 
+  useEffect(() => {
+    let active = true;
+
+    async function redirectIfAlreadyLogged() {
+      const { data: { session } } = await supabase.auth.getSession();
+      const user = session?.user ?? (await supabase.auth.getUser()).data.user;
+      if (!active || !user) return;
+
+      const { data: profile } = await supabase
+        .from('profiles')
+        .select('role, barbearia_id, barbeiro_id')
+        .eq('id', user.id)
+        .maybeSingle();
+
+      if (!active) return;
+      if (profile?.role && PLATFORM_ROLES.has(profile.role)) {
+        router.replace(profile.barbearia_id ? '/gestao/agenda' : '/admin/plataforma');
+      }
+    }
+
+    redirectIfAlreadyLogged();
+    return () => {
+      active = false;
+    };
+  }, [router]);
+
   async function handleLogin(e: React.FormEvent) {
     e.preventDefault();
     setLoading(true);
     setError(null);
 
-    const { data, error } = await supabase.auth.signInWithPassword({
-      email,
-      password,
-    });
+    try {
+      const response = await withTimeout(
+        fetch('/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            email: email.toLowerCase().trim(),
+            password,
+          }),
+        }),
+        'Login',
+      );
 
-    if (error) {
-      setError(error.message);
-      setLoading(false);
-    } else {
-      const userId = data.user?.id;
+      const result = await response.json() as LoginResponse;
+
+      if (!response.ok) {
+        setError(result.error || 'E-mail ou senha incorretos.');
+        return;
+      }
+
+      const userId = result.userId;
       if (!userId) {
-        router.push('/');
+        router.replace('/');
         return;
       }
 
-      const { data: profile } = await supabase
-        .from('profiles')
-        .select('role')
-        .eq('id', userId)
-        .maybeSingle();
-
-      if (profile?.role) {
-        router.push(profile.role === 'admin' ? '/gestao/caixa' : '/gestao/agenda');
+      if (redirectTo === '/admin/plataforma') {
+        if (result.profile?.role && PLATFORM_ROLES.has(result.profile.role)) {
+          router.replace(result.profile.barbearia_id ? '/gestao/agenda' : '/admin/plataforma');
+        } else {
+          router.replace('/gestao/agenda');
+        }
         return;
       }
 
-      const { data: clientAccount } = await supabase
-        .from('cliente_accounts')
-        .select('auth_user_id')
-        .eq('auth_user_id', userId)
-        .maybeSingle();
+      const profile = result.profile;
 
-      router.push(clientAccount ? '/cliente' : '/');
+      if (redirectTo && redirectTo !== '/admin/plataforma') {
+        router.replace(redirectTo);
+        return;
+      }
+
+      if (profile?.role && PLATFORM_ROLES.has(profile.role)) {
+        router.replace(profile.barbearia_id ? '/gestao/agenda' : '/admin/plataforma');
+        return;
+      }
+
+      if (profile?.role === 'barbeiro' && profile.barbearia_id && !profile.barbeiro_id) {
+        setError('Seu acesso profissional ainda nao esta vinculado a um barbeiro. Fale com o administrador da barbearia.');
+        return;
+      }
+
+      if (profile?.role && profile.barbearia_id && PROFESSIONAL_ROLES.has(profile.role)) {
+        router.replace(ADMIN_ROLES.has(profile.role) ? '/gestao/caixa' : '/gestao/agenda');
+        return;
+      }
+
+      router.replace(result.hasClientAccount ? '/cliente' : '/');
+    } catch (err) {
+      console.error('[Login] Falha ao entrar:', err);
+      setError(err instanceof Error && err.message.includes('demorou demais')
+        ? 'Nao foi possivel entrar agora. Verifique a conexao e tente novamente.'
+        : 'Nao foi possivel concluir o login agora. Tente novamente.');
+    } finally {
+      setLoading(false);
     }
   }
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-background px-4">
+    <div className="flex min-h-[100dvh] items-center justify-center bg-background px-4 py-8">
       <div className="glass w-full max-w-md rounded-2xl p-8 shadow-2xl">
         <div className="mb-8 flex flex-col items-center">
           <div className="mb-4 flex h-16 w-16 items-center justify-center rounded-2xl bg-accent/10 neon-border">
@@ -101,7 +204,7 @@ export default function LoginPage() {
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
                 className="w-full rounded-xl border border-border bg-card/50 py-3 pl-11 pr-12 text-white placeholder-muted focus:border-accent focus:outline-none focus:ring-1 focus:ring-accent transition-all"
-                placeholder="â€¢â€¢â€¢â€¢â€¢â€¢â€¢â€¢"
+                placeholder="Digite sua senha"
               />
               <button
                 type="button"
@@ -124,10 +227,7 @@ export default function LoginPage() {
         </form>
 
         <p className="mt-6 text-center text-sm text-muted">
-          Nao tem uma conta profissional?{' '}
-          <a href="/register" className="font-medium text-accent hover:underline">
-            Cadastre-se
-          </a>
+          Nao tem acesso profissional? Peca um convite ao dono ou admin da barbearia.
         </p>
 
         <p className="mt-8 text-center text-xs text-muted">
@@ -135,5 +235,13 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={<LoginLoading />}>
+      <LoginInner />
+    </Suspense>
   );
 }

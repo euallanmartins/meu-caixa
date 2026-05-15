@@ -48,6 +48,7 @@ type LandingBarbearia = {
   logo_url?: string | null;
   capa_url?: string | null;
   ativo?: boolean | null;
+  status?: string | null;
   horarios: LandingHorario[];
   servicos: LandingServico[];
   statusLabel: string;
@@ -121,6 +122,8 @@ function buildFallbackBarbearias(): LandingBarbearia[] {
 
 export default function BarbeariaSearchPage() {
   const [query, setQuery] = useState('');
+  const [openOnly, setOpenOnly] = useState(false);
+  const [sortMode, setSortMode] = useState<'recomendadas' | 'avaliadas' | 'recentes'>('recomendadas');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [barbearias, setBarbearias] = useState<LandingBarbearia[]>(buildFallbackBarbearias);
 
@@ -132,6 +135,8 @@ export default function BarbeariaSearchPage() {
         supabasePublic
           .from('barbearias')
           .select('*')
+          .eq('status', 'active')
+          .eq('ativo', true)
           .order('nome'),
         supabasePublic
           .from('horarios_funcionamento')
@@ -180,7 +185,7 @@ export default function BarbeariaSearchPage() {
 
       setBarbearias(
         barbeariasResponse.data
-        .filter(barbearia => barbearia.ativo !== false)
+        .filter(barbearia => barbearia.ativo !== false && barbearia.status === 'active')
         .map(barbearia => {
           const horarios = horariosByBarbearia.get(barbearia.id) ?? [];
           const status = getBarbeariaStatus(horarios);
@@ -197,6 +202,7 @@ export default function BarbeariaSearchPage() {
             logo_url: barbearia.logo_url,
             capa_url: barbearia.capa_url,
             ativo: barbearia.ativo,
+            status: barbearia.status,
             horarios,
             servicos: (servicosByBarbearia.get(barbearia.id) ?? []).slice(0, 3),
             ...status,
@@ -214,18 +220,24 @@ export default function BarbeariaSearchPage() {
 
   const filteredBarbearias = useMemo(() => {
     const normalized = query.trim().toLowerCase();
-    if (!normalized) return barbearias;
+    const results = barbearias.filter(barbearia => {
+      if (openOnly && !barbearia.isOpen) return false;
+      if (!normalized) return true;
+      return [barbearia.nome, barbearia.slug, barbearia.cidade, barbearia.statusLabel, ...barbearia.servicos.map(servico => servico.nome)]
+        .some(value => value.toLowerCase().includes(normalized));
+    });
 
-    return barbearias.filter(barbearia =>
-      [barbearia.nome, barbearia.slug, barbearia.cidade, barbearia.statusLabel, ...barbearia.servicos.map(servico => servico.nome)]
-        .some(value => value.toLowerCase().includes(normalized))
-    );
-  }, [barbearias, query]);
+    return [...results].sort((a, b) => {
+      if (sortMode === 'avaliadas') return a.nome.localeCompare(b.nome);
+      if (sortMode === 'recentes') return b.id.localeCompare(a.id);
+      return Number(b.isOpen) - Number(a.isOpen) || a.nome.localeCompare(b.nome);
+    });
+  }, [barbearias, query, openOnly, sortMode]);
 
   const firstBarbearia = barbearias[0] ?? buildFallbackBarbearias()[0];
 
   return (
-    <div className="min-h-screen overflow-hidden bg-[#050505] text-white">
+    <div className="min-h-[100dvh] max-w-full overflow-x-hidden bg-[#050505] text-white">
       <header className="relative z-20 border-b border-white/8 bg-[#050505]/85 backdrop-blur-2xl">
         <div className="mx-auto flex min-h-20 max-w-[1900px] items-center justify-between gap-2 px-4 py-4 min-[390px]:gap-3 min-[390px]:px-5 sm:gap-4 sm:px-6 lg:min-h-[108px] lg:px-[64px]">
           <div className="flex min-w-0 flex-1 items-center gap-2 min-[390px]:gap-3 sm:gap-4">
@@ -233,8 +245,8 @@ export default function BarbeariaSearchPage() {
               <Scissors className="h-6 w-6 min-[390px]:h-7 min-[390px]:w-7 sm:h-8 sm:w-8 lg:h-7 lg:w-7" />
             </div>
             <div className="min-w-0 flex-1">
-              <h1 className="truncate text-lg font-black tracking-tight min-[390px]:text-xl sm:text-3xl lg:text-2xl">Meu Caixa</h1>
-              <p className="mt-1 max-w-[118px] truncate text-[9px] font-black uppercase tracking-[0.18em] text-white/55 min-[390px]:max-w-[150px] min-[390px]:text-[10px] min-[390px]:tracking-[0.24em] sm:max-w-none sm:text-[12px] sm:tracking-[0.28em] lg:text-[10px]">
+              <h1 className="text-lg font-black leading-tight tracking-tight min-[390px]:text-xl sm:text-3xl lg:text-2xl">Meu Caixa</h1>
+              <p className="mt-1 max-w-[130px] text-[9px] font-black uppercase leading-tight tracking-[0.12em] text-white/55 min-[390px]:max-w-[170px] min-[390px]:text-[10px] sm:max-w-none sm:text-[12px] sm:tracking-[0.2em] lg:text-[10px]">
                 Agendamento online
               </p>
             </div>
@@ -245,10 +257,12 @@ export default function BarbeariaSearchPage() {
               href="/login"
               aria-label="Acesso profissional"
               prefetch={false}
-              className="flex h-12 w-12 shrink-0 items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/[0.035] text-sm font-bold text-white transition-all hover:border-[#D6B47A]/40 hover:text-[#D6B47A] min-[430px]:w-auto min-[430px]:px-3 sm:h-16 sm:gap-3 sm:px-5 sm:text-lg lg:h-12 lg:px-6 lg:text-xs lg:font-black lg:uppercase lg:tracking-[0.18em]"
+              className="flex h-12 shrink-0 items-center justify-center gap-2 rounded-2xl border border-white/20 bg-white/[0.035] px-3 text-sm font-bold text-white transition-all hover:border-[#D6B47A]/40 hover:text-[#D6B47A] sm:h-16 sm:gap-3 sm:px-5 sm:text-lg lg:h-12 lg:px-6 lg:text-xs lg:font-black lg:uppercase lg:tracking-[0.18em]"
             >
               <Users className="h-5 w-5 shrink-0 text-[#D6B47A] sm:h-7 sm:w-7 lg:h-5 lg:w-5" />
-              <span className="hidden leading-tight min-[430px]:inline">Acesso profissional</span>
+              <span className="hidden leading-tight min-[360px]:inline min-[360px]:max-w-[92px] min-[360px]:text-xs min-[360px]:font-black min-[360px]:uppercase min-[360px]:tracking-[0.08em] min-[430px]:max-w-none min-[430px]:text-sm min-[430px]:normal-case min-[430px]:tracking-normal">
+                Profissional
+              </span>
               <ChevronRight className="hidden h-4 w-4 lg:block" />
             </Link>
             <button
@@ -298,27 +312,32 @@ export default function BarbeariaSearchPage() {
         )}
       </header>
 
-      <main className="relative z-10 mx-auto max-w-[1900px] px-5 pb-12 pt-8 sm:px-6 lg:px-[70px] lg:pb-8 lg:pt-10">
-        <section className="relative grid gap-8 lg:grid-cols-[minmax(680px,1fr)_470px_420px] lg:items-start xl:grid-cols-[minmax(760px,1fr)_470px_420px]">
-          <div className="space-y-6 lg:space-y-7 lg:pt-6">
-            <div className="relative lg:hidden">
+      <main className="relative z-10 mx-auto w-full max-w-[1900px] overflow-x-hidden px-4 pb-12 pt-8 sm:px-6 lg:px-8 lg:pb-8 lg:pt-10 2xl:px-[70px]">
+        <section className="relative grid min-w-0 gap-8 xl:grid-cols-[minmax(0,1fr)_minmax(320px,400px)] xl:items-start 2xl:grid-cols-[minmax(0,1fr)_minmax(340px,470px)_minmax(320px,420px)]">
+          <div className="min-w-0 space-y-6 lg:space-y-7 lg:pt-6">
+            <div className="relative h-[250px] overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.035] shadow-2xl shadow-black/30 min-[390px]:h-[285px] sm:h-[360px] lg:hidden">
               <Image
                 src="/agenda-mockup.png"
                 alt=""
                 width={1024}
                 height={682}
                 priority
-                className="absolute right-[-170px] top-[-18px] h-[520px] w-[520px] max-w-none object-cover opacity-58 sm:right-[-120px] sm:h-[560px] sm:w-[560px]"
+                className="absolute inset-0 h-full w-full object-cover opacity-75"
               />
-              <div className="absolute -left-5 -right-5 -top-8 h-[560px] bg-gradient-to-r from-[#050505] via-[#050505]/88 to-[#050505]/30" />
-              <div className="absolute -left-5 -right-5 top-[320px] h-48 bg-gradient-to-b from-transparent to-[#050505]" />
+              <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/50 to-transparent" />
+              <div className="absolute bottom-0 left-0 right-0 p-5">
+                <p className="text-[10px] font-black uppercase tracking-[0.22em] text-[#D6B47A]">Agenda premium</p>
+                <p className="mt-2 max-w-[18rem] text-sm font-bold leading-relaxed text-white/75">
+                  Escolha barbearia, servico, profissional e horario em poucos toques.
+                </p>
+              </div>
             </div>
 
             <div className="relative max-w-3xl">
               <p className="text-[12px] font-black uppercase tracking-[0.24em] text-[#D6B47A] sm:text-[13px] sm:tracking-[0.28em] lg:text-[13px]">
                 Escolha onde voce quer agendar
               </p>
-              <h2 className="mt-7 max-w-[11ch] text-[2.85rem] font-black leading-[1.05] tracking-tight text-white min-[390px]:text-[3.1rem] sm:max-w-none sm:text-6xl lg:mt-8 lg:text-[76px] lg:leading-[1.12] xl:text-[82px]">
+              <h2 className="mt-7 max-w-[11ch] text-[2.45rem] font-black leading-[1.05] tracking-tight text-white min-[390px]:text-[2.85rem] sm:max-w-none sm:text-6xl lg:mt-8 lg:text-[76px] lg:leading-[1.12] xl:text-[82px]">
                 Encontre a barbearia e reserve seu <span className="text-[#D6B47A]">horario.</span>
               </h2>
               <p className="mt-6 max-w-[860px] text-lg leading-relaxed text-white/68 sm:text-xl lg:text-[22px] lg:leading-[1.45] lg:text-white/58">
@@ -335,7 +354,7 @@ export default function BarbeariaSearchPage() {
               </InfoCard>
             </div>
 
-            <label className="relative z-10 block max-w-[860px]">
+            <label className="relative z-10 block w-full max-w-[860px] min-w-0">
               <Search className="absolute left-5 top-1/2 h-6 w-6 -translate-y-1/2 text-white/35 lg:h-5 lg:w-5" />
               <input
                 value={query}
@@ -346,46 +365,70 @@ export default function BarbeariaSearchPage() {
               <SlidersHorizontal className="absolute right-5 top-1/2 h-6 w-6 -translate-y-1/2 text-white/45 lg:hidden" />
             </label>
 
-            <div className="relative z-10 grid max-w-[860px] gap-4">
+            <div className="relative z-10 flex w-full max-w-[860px] min-w-0 gap-2 overflow-x-auto pb-1 no-scrollbar">
+              <button
+                type="button"
+                onClick={() => setOpenOnly(current => !current)}
+                className={`h-11 shrink-0 rounded-2xl border px-4 text-xs font-black uppercase tracking-[0.12em] ${openOnly ? 'border-[#D6B47A]/40 bg-[#D6B47A]/15 text-[#D6B47A]' : 'border-white/10 bg-white/[0.04] text-white/60'}`}
+              >
+                Abertas agora
+              </button>
+              {[
+                ['recomendadas', 'Recomendadas'],
+                ['avaliadas', 'Melhor avaliadas'],
+                ['recentes', 'Recentes'],
+              ].map(([value, label]) => (
+                <button
+                  key={value}
+                  type="button"
+                  onClick={() => setSortMode(value as typeof sortMode)}
+                  className={`h-11 shrink-0 rounded-2xl border px-4 text-xs font-black uppercase tracking-[0.12em] ${sortMode === value ? 'border-[#D6B47A]/40 bg-[#D6B47A]/15 text-[#D6B47A]' : 'border-white/10 bg-white/[0.04] text-white/60'}`}
+                >
+                  {label}
+                </button>
+              ))}
+            </div>
+
+            <div className="relative z-10 grid w-full max-w-[860px] min-w-0 gap-4">
               {filteredBarbearias.map(barbearia => (
                 <Link
                   key={barbearia.id}
                   href={`/barbearia/${barbearia.id}`}
                   prefetch={false}
-                  className="group grid grid-cols-[92px_minmax(0,1fr)] items-center gap-4 rounded-3xl border border-[#D6B47A]/35 bg-[#D6B47A]/[0.04] p-5 transition-all hover:border-[#D6B47A]/55 hover:bg-white/[0.065] sm:grid-cols-[104px_minmax(0,1fr)_auto] lg:p-6"
+                  className="group grid w-full min-w-0 max-w-full grid-cols-[64px_minmax(0,1fr)] items-center gap-3 rounded-3xl border border-[#D6B47A]/35 bg-[#D6B47A]/[0.04] p-4 transition-all hover:border-[#D6B47A]/55 hover:bg-white/[0.065] min-[390px]:grid-cols-[76px_minmax(0,1fr)] min-[390px]:gap-4 min-[390px]:p-5 sm:grid-cols-[104px_minmax(0,1fr)_auto] lg:p-6"
                 >
-                  <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-2xl border border-[#D6B47A]/25 bg-[#D6B47A]/12 text-[#D6B47A] lg:h-[90px] lg:w-[90px]">
+                  <div className="flex h-16 w-16 items-center justify-center overflow-hidden rounded-2xl border border-[#D6B47A]/25 bg-[#D6B47A]/12 text-[#D6B47A] min-[390px]:h-20 min-[390px]:w-20 lg:h-[90px] lg:w-[90px]">
                     {barbearia.logo_url ? (
                       <img src={barbearia.logo_url} alt="" className="h-full w-full object-cover" />
                     ) : (
-                      <Scissors className="h-10 w-10 lg:h-12 lg:w-12" />
+                      <Scissors className="h-8 w-8 min-[390px]:h-10 min-[390px]:w-10 lg:h-12 lg:w-12" />
                     )}
                   </div>
 
-                  <div className="min-w-0">
-                    <div className="flex min-w-0 flex-wrap items-center gap-2 sm:gap-3">
-                      <h3 className="min-w-0 max-w-full text-2xl font-black tracking-tight text-white sm:truncate sm:text-3xl lg:text-2xl">{barbearia.nome}</h3>
-                      <span className="rounded-full border border-[#D6B47A]/20 bg-[#D6B47A]/10 px-3 py-1 text-[10px] font-black uppercase tracking-[0.16em] text-[#D6B47A]">
+                  <div className="min-w-0 overflow-hidden">
+                    <div className="flex min-w-0 flex-col items-start gap-2 min-[390px]:flex-row min-[390px]:flex-wrap min-[390px]:items-center sm:gap-3">
+                      <h3 className="min-w-0 max-w-full overflow-hidden text-ellipsis whitespace-nowrap text-xl font-black tracking-tight text-white [overflow-wrap:normal] min-[390px]:text-2xl sm:text-3xl lg:text-2xl">{barbearia.nome}</h3>
+                      <span className="max-w-full shrink-0 rounded-full border border-[#D6B47A]/20 bg-[#D6B47A]/10 px-3 py-1 text-[9px] font-black uppercase tracking-[0.08em] text-[#D6B47A] min-[390px]:text-[10px] min-[390px]:tracking-[0.16em]">
                         Disponivel
                       </span>
                     </div>
-                    <p className="mt-2 flex items-center gap-2 text-base text-white/55 sm:text-lg">
+                    <p className="mt-2 flex min-w-0 items-center gap-2 text-sm text-white/55 min-[390px]:text-base sm:text-lg">
                       <MapPin className="h-4 w-4 shrink-0 sm:h-5 sm:w-5 lg:h-4 lg:w-4" />
-                      {barbearia.cidade}
+                      <span className="min-w-0 overflow-hidden text-ellipsis whitespace-nowrap [overflow-wrap:normal]">{barbearia.cidade}</span>
                     </p>
-                    <p className="mt-2 flex flex-wrap items-center gap-x-2 gap-y-1 text-sm text-white/70 sm:text-base">
+                    <p className="mt-2 flex min-w-0 flex-wrap items-center gap-x-2 gap-y-1 text-xs text-white/70 min-[390px]:text-sm sm:text-base">
                       <Star className="h-4 w-4 shrink-0 fill-yellow-300 text-yellow-300 sm:h-5 sm:w-5 lg:h-4 lg:w-4" />
                       <span className="font-black text-yellow-300">4,9</span>
                       <span>(128 avaliacoes)</span>
                       <span className="text-white/35">-</span>
-                      <span className={barbearia.isOpen ? 'text-[#D6B47A]' : 'text-white/50'}>{barbearia.statusLabel}</span>
+                      <span className={`min-w-0 max-w-full overflow-hidden text-ellipsis whitespace-nowrap [overflow-wrap:normal] ${barbearia.isOpen ? 'text-[#D6B47A]' : 'text-white/50'}`}>{barbearia.statusLabel}</span>
                     </p>
                     {barbearia.servicos.length > 0 && (
-                      <div className="mt-3 flex flex-wrap gap-2">
+                      <div className="mt-3 flex min-w-0 max-w-full flex-wrap gap-2 overflow-hidden">
                         {barbearia.servicos.map(servico => (
                           <span
                             key={`${barbearia.id}-${servico.nome}`}
-                            className="max-w-full truncate rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-xs font-bold text-white/62"
+                            className="min-w-0 max-w-full overflow-hidden text-ellipsis whitespace-nowrap rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] font-bold text-white/62 [overflow-wrap:normal] min-[390px]:text-xs"
                           >
                             {servico.nome} - {formatMoney(servico.valor)}
                           </span>
@@ -394,7 +437,7 @@ export default function BarbeariaSearchPage() {
                     )}
                   </div>
 
-                  <div className="col-span-2 flex h-14 items-center justify-center gap-2 rounded-2xl bg-[#D6B47A] px-7 text-lg font-black text-black transition-all group-hover:scale-[1.02] sm:col-span-1 sm:h-16 sm:text-xl">
+                  <div className="col-span-2 flex h-14 min-w-0 items-center justify-center gap-2 rounded-2xl bg-[#D6B47A] px-6 text-base font-black text-black transition-all group-hover:scale-[1.02] sm:col-span-1 sm:h-16 sm:text-xl">
                     Ver barbearia
                     <ChevronRight className="h-6 w-6 lg:h-5 lg:w-5" />
                   </div>
@@ -408,7 +451,7 @@ export default function BarbeariaSearchPage() {
             </div>
           </div>
 
-          <aside className="hidden overflow-hidden rounded-3xl border border-white/10 bg-white/[0.035] lg:block">
+          <aside className="hidden min-w-0 overflow-hidden rounded-3xl border border-white/10 bg-white/[0.035] xl:block">
             <InfoCard icon={ShieldCheck} title="Painel separado por estabelecimento">
               Proprietarios e funcionarios acessam somente a barbearia vinculada ao seu perfil.
             </InfoCard>
@@ -438,7 +481,7 @@ export default function BarbeariaSearchPage() {
             </div>
           </aside>
 
-          <aside className="relative hidden lg:block">
+          <aside className="relative hidden min-w-0 2xl:block">
             <div className="relative h-[650px] overflow-hidden rounded-3xl border border-white/10 shadow-2xl shadow-black/30">
               <Image
                 src="/agenda-mockup.png"
@@ -462,7 +505,7 @@ export default function BarbeariaSearchPage() {
 
         <section className="mt-12 lg:hidden">
           <h3 className="text-2xl font-black text-white">Como funciona</h3>
-          <div className="mt-6 grid grid-cols-3 gap-4 text-center">
+          <div className="mt-6 grid gap-4 text-center min-[520px]:grid-cols-3">
             <Step number="1" title="Escolha a barbearia" text="Encontre a barbearia ideal perto de voce." />
             <Step number="2" title="Selecione servico" text="Escolha o servico, profissional e horario." />
             <Step number="3" title="Confirme e pronto" text="Confirme seu agendamento e receba a confirmacao." />
@@ -482,13 +525,13 @@ export default function BarbeariaSearchPage() {
 
 function InfoCard({ icon: Icon, title, children }: { icon: LucideIcon; title: string; children: ReactNode }) {
   return (
-    <div className="flex gap-5 p-5 lg:p-8">
-      <div className="flex h-16 w-16 shrink-0 items-center justify-center rounded-full border border-[#D6B47A]/15 bg-[#D6B47A]/8 text-[#D6B47A]">
-        <Icon className="h-8 w-8" />
+    <div className="flex min-w-0 gap-4 p-5 min-[390px]:gap-5 lg:p-8">
+      <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-full border border-[#D6B47A]/15 bg-[#D6B47A]/8 text-[#D6B47A] min-[390px]:h-16 min-[390px]:w-16">
+        <Icon className="h-7 w-7 min-[390px]:h-8 min-[390px]:w-8" />
       </div>
-      <div>
-        <h3 className="text-xl font-black text-white lg:text-lg">{title}</h3>
-        <p className="mt-2 text-base leading-relaxed text-white/58 lg:text-sm">{children}</p>
+      <div className="min-w-0">
+        <h3 className="text-lg font-black leading-tight text-white min-[390px]:text-xl lg:text-lg">{title}</h3>
+        <p className="mt-2 text-sm leading-relaxed text-white/58 min-[390px]:text-base lg:text-sm">{children}</p>
       </div>
     </div>
   );

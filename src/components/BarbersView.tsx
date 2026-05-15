@@ -1,12 +1,13 @@
 ﻿/* eslint-disable */
 'use client';
 
-import { useMemo, useState } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import Link from 'next/link';
 import {
   BarChart3,
   CalendarCheck,
   ChevronDown,
+  KeyRound,
   MoreVertical,
   Pencil,
   Percent,
@@ -23,6 +24,7 @@ interface BarbersViewProps {
   refreshData: () => void;
   loading: boolean;
   stats?: DashboardStats;
+  accessPanel?: ReactNode;
 }
 
 const money = (value: number) =>
@@ -36,7 +38,7 @@ function performanceLabel(performance?: { appointments: number; completed: numbe
   return { label: 'Em acompanhamento', className: 'text-blue-400' };
 }
 
-export function BarbersView({ barbers, barbeariaId, refreshData, loading, stats }: BarbersViewProps) {
+export function BarbersView({ barbers, barbeariaId, refreshData, loading, stats, accessPanel }: BarbersViewProps) {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [editingBarber, setEditingBarber] = useState<any>(null);
   const [search, setSearch] = useState('');
@@ -107,7 +109,7 @@ export function BarbersView({ barbers, barbeariaId, refreshData, loading, stats 
         </div>
         <button
           onClick={openCreate}
-          className="flex h-16 items-center justify-center gap-4 rounded-2xl bg-[#00d875] px-6 text-sm font-black uppercase tracking-[0.22em] text-black transition-all hover:scale-[1.01] lg:h-12 lg:rounded-xl lg:text-base lg:normal-case lg:tracking-normal"
+          className="flex h-16 items-center justify-center gap-4 rounded-2xl bg-gradient-to-r from-[#B8935F] to-[#E0C28D] px-6 text-sm font-black uppercase tracking-[0.22em] text-black transition-all hover:scale-[1.01] lg:h-12 lg:rounded-xl lg:text-base lg:normal-case lg:tracking-normal"
         >
           <UserRoundPlus className="h-5 w-5" />
           Novo Barbeiro
@@ -143,6 +145,7 @@ export function BarbersView({ barbers, barbeariaId, refreshData, loading, stats 
         </div>
       </section>
 
+      {activeTab === 'Profissionais' ? (
       <section className="space-y-4">
         <div className="grid gap-3 lg:grid-cols-[minmax(0,1fr)_180px_220px]">
           <div className="relative">
@@ -163,14 +166,6 @@ export function BarbersView({ barbers, barbeariaId, refreshData, loading, stats 
             <ChevronDown className="h-4 w-4" />
           </button>
         </div>
-
-        {activeTab !== 'Profissionais' && (
-          <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-5 text-sm text-white/65">
-            {activeTab === 'Acessos' && 'Acompanhe quais profissionais estao ativos no app. Use o botao de editar para ajustar os dados do profissional.'}
-            {activeTab === 'Permissoes' && 'Permissoes usam os perfis cadastrados da equipe e ficam vinculadas ao cadastro do profissional.'}
-            {activeTab === 'Funcoes' && 'As funcoes exibem o titulo, destaque e comissao real configurados em cada profissional.'}
-          </div>
-        )}
 
         <div className="space-y-3 lg:hidden">
           {filtered.length === 0 ? (
@@ -350,6 +345,13 @@ export function BarbersView({ barbers, barbeariaId, refreshData, loading, stats 
           <span className="rounded-xl border border-[#D6B47A]/40 px-4 py-2 font-black text-[#D6B47A]">1</span>
         </div>
       </section>
+      ) : activeTab === 'Acessos' ? (
+        <AccessSection barbers={barbers} accessPanel={accessPanel} />
+      ) : activeTab === 'Permissoes' ? (
+        <PermissionsSection />
+      ) : (
+        <RolesSection barbers={barbers} />
+      )}
     </div>
   );
 }
@@ -368,5 +370,102 @@ function TeamKpi({ icon: Icon, label, value, hint }: any) {
         </div>
       </div>
     </div>
+  );
+}
+
+function AccessSection({ barbers, accessPanel }: { barbers: any[]; accessPanel?: ReactNode }) {
+  return (
+    <section className="space-y-5">
+      <div className="grid gap-4 xl:grid-cols-[minmax(0,1fr)_minmax(320px,0.55fr)]">
+        <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-5">
+          <div className="flex items-center gap-3">
+            <KeyRound className="h-5 w-5 text-[#D6B47A]" />
+            <div>
+              <h3 className="text-xl font-black text-white">Acessos profissionais</h3>
+              <p className="mt-1 text-sm text-white/50">Controle quem consegue entrar no app profissional.</p>
+            </div>
+          </div>
+          <div className="mt-5 divide-y divide-white/8">
+            {barbers.length === 0 ? (
+              <p className="py-8 text-sm text-white/45">Nenhum profissional cadastrado.</p>
+            ) : barbers.map(barber => (
+              <div key={barber.id} className="grid gap-3 py-4 md:grid-cols-[minmax(0,1fr)_160px_180px] md:items-center">
+                <div className="min-w-0">
+                  <p className="truncate font-black text-white">{barber.nome}</p>
+                  <p className="mt-1 truncate text-sm text-white/45">{barber.email_acesso || barber.email || 'Sem e-mail de acesso vinculado'}</p>
+                </div>
+                <span className="w-fit rounded-full border border-white/10 bg-white/[0.04] px-3 py-1 text-[11px] font-black uppercase text-white/55">
+                  {barber.barbeiro_id || barber.auth_user_id || barber.user_id ? 'Acesso ativo' : 'Sem acesso'}
+                </span>
+                <span className="text-sm text-white/45">Convite via aba de convites</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="min-w-0">{accessPanel}</div>
+      </div>
+    </section>
+  );
+}
+
+function PermissionsSection() {
+  const roles = [
+    { role: 'Proprietario / Owner', access: 'Acesso completo da barbearia, configuracoes, equipe, caixa, relatorios e convites.' },
+    { role: 'Admin', access: 'Gestao operacional ampla, com limites para propriedade e configuracoes sensiveis.' },
+    { role: 'Gerente', access: 'Agenda, clientes, equipe operacional e relatorios basicos.' },
+    { role: 'Barbeiro', access: 'Minha agenda, aceite/recusa dos proprios agendamentos, bloqueios proprios e meus ganhos.' },
+    { role: 'Funcionario', access: 'Acesso operacional limitado conforme permissao configurada.' },
+  ];
+
+  return (
+    <section className="grid gap-4 lg:grid-cols-2">
+      {roles.map(item => (
+        <article key={item.role} className="rounded-2xl border border-white/10 bg-white/[0.035] p-5">
+          <p className="text-[11px] font-black uppercase tracking-[0.18em] text-[#D6B47A]">Permissao</p>
+          <h3 className="mt-2 text-xl font-black text-white">{item.role}</h3>
+          <p className="mt-3 text-sm leading-relaxed text-white/55">{item.access}</p>
+        </article>
+      ))}
+    </section>
+  );
+}
+
+function RolesSection({ barbers }: { barbers: any[] }) {
+  const grouped = barbers.reduce<Record<string, number>>((acc, barber) => {
+    const key = barber.titulo || 'Barbeiro';
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {});
+
+  return (
+    <section className="space-y-4">
+      <div className="rounded-2xl border border-white/10 bg-white/[0.035] p-5">
+        <h3 className="text-xl font-black text-white">Funcoes da equipe</h3>
+        <p className="mt-2 text-sm text-white/50">Acompanhe cargos, titulos e comissoes configuradas nos profissionais.</p>
+      </div>
+      <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+        {Object.entries(grouped).map(([role, total]) => (
+          <article key={role} className="rounded-2xl border border-white/10 bg-white/[0.035] p-5">
+            <p className="text-3xl font-black text-[#D6B47A]">{total}</p>
+            <h4 className="mt-2 font-black text-white">{role}</h4>
+            <p className="mt-1 text-sm text-white/45">Profissionais nesta funcao</p>
+          </article>
+        ))}
+      </div>
+      <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.03]">
+        <div className="grid grid-cols-[minmax(0,1fr)_160px_140px] border-b border-white/8 px-5 py-3 text-[11px] font-black uppercase tracking-[0.14em] text-white/45">
+          <span>Profissional</span>
+          <span>Funcao</span>
+          <span>Comissao</span>
+        </div>
+        {barbers.map(barber => (
+          <div key={barber.id} className="grid grid-cols-[minmax(0,1fr)_160px_140px] gap-3 border-b border-white/8 px-5 py-4 last:border-b-0">
+            <span className="truncate font-black text-white">{barber.nome}</span>
+            <span className="truncate text-white/55">{barber.titulo || 'Barbeiro'}</span>
+            <span className="font-black text-[#D6B47A]">{barber.comissao}{barber.comissao_tipo === 'fixo' ? ' R$' : '%'}</span>
+          </div>
+        ))}
+      </div>
+    </section>
   );
 }

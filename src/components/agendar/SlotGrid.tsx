@@ -1,20 +1,38 @@
-import { Clock } from 'lucide-react';
+import { Clock, Loader2 } from 'lucide-react';
 import type { SlotInfo } from '@/hooks/useAgendamento';
 
 interface Props {
   slots:           SlotInfo[];
   horarioSelecionado: string | null;
   onSelect:        (time: string) => void;
+  onJoinWaitlist?: () => void;
+  waitlistLoading?: boolean;
+  waitlistMessage?: string | null;
 }
 
-export function SlotGrid({ slots, horarioSelecionado, onSelect }: Props) {
+export function SlotGrid({ slots, horarioSelecionado, onSelect, onJoinWaitlist, waitlistLoading, waitlistMessage }: Props) {
   const disponiveis = slots.filter(s => s.available);
+  const waitlistAction = onJoinWaitlist ? (
+    <div className="mt-5 space-y-3">
+      <button
+        type="button"
+        onClick={onJoinWaitlist}
+        disabled={waitlistLoading}
+        className="mx-auto flex h-12 items-center justify-center gap-2 rounded-xl bg-[#D6B47A] px-5 text-sm font-black text-black transition-all hover:scale-[1.01] disabled:opacity-60"
+      >
+        {waitlistLoading && <Loader2 className="h-4 w-4 animate-spin" />}
+        Entrar na lista de espera
+      </button>
+      {waitlistMessage && <p className="text-xs font-bold text-[#D6B47A]">{waitlistMessage}</p>}
+    </div>
+  ) : null;
 
   if (slots.length === 0) {
     return (
       <div className="py-8 text-center bg-white/5 border border-white/10 rounded-2xl">
         <Clock className="h-8 w-8 mx-auto text-white/20 mb-2" />
         <p className="text-white/40 text-sm">Nenhum horário para este dia.</p>
+        {waitlistAction}
       </div>
     );
   }
@@ -25,13 +43,14 @@ export function SlotGrid({ slots, horarioSelecionado, onSelect }: Props) {
         <Clock className="h-8 w-8 mx-auto text-white/20 mb-2" />
         <p className="text-white/40 text-sm font-bold">Dia lotado!</p>
         <p className="text-white/30 text-xs mt-1">Escolha outra data.</p>
+        {waitlistAction}
       </div>
     );
   }
 
   return (
     <div>
-      <div className="grid grid-cols-4 sm:grid-cols-5 gap-2">
+      <div className="grid grid-cols-3 gap-2 min-[380px]:grid-cols-4 sm:grid-cols-5">
         {slots.map(slot => {
           const isSelected  = horarioSelecionado === slot.time;
           const isAvailable = slot.available;
@@ -46,7 +65,7 @@ export function SlotGrid({ slots, horarioSelecionado, onSelect }: Props) {
               aria-label={`${slot.time} — ${isAvailable ? 'disponível' : 'indisponível'}`}
               aria-pressed={isSelected}
               className={`
-                relative py-3 rounded-xl text-sm font-black transition-all duration-150
+                relative min-h-12 rounded-xl px-2 py-3 text-sm font-black transition-all duration-150
                 ${isSelected
                   ? 'bg-[#D6B47A] text-black shadow-lg shadow-[#D6B47A]/25 scale-105'
                   : isAvailable
@@ -57,7 +76,7 @@ export function SlotGrid({ slots, horarioSelecionado, onSelect }: Props) {
             >
               {slot.time}
 
-              {/* Ponto verde de disponível */}
+              {/* Ponto de disponibilidade */}
               {isAvailable && !isSelected && (
                 <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-[#D6B47A]/60" />
               )}
@@ -67,7 +86,7 @@ export function SlotGrid({ slots, horarioSelecionado, onSelect }: Props) {
       </div>
 
       {/* Legenda */}
-      <div className="flex items-center gap-4 mt-3">
+      <div className="mt-3 flex flex-wrap items-center gap-x-4 gap-y-2">
         <div className="flex items-center gap-1.5">
           <span className="h-2 w-2 rounded-full bg-[#D6B47A]/60" />
           <span className="text-[10px] text-white/30">Disponível</span>

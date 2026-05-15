@@ -25,7 +25,7 @@
   --accent: #d6b47a;
   --accent-hover: #e7c992;
   --accent-contrast: #120f09;
-  --success: #22c55e;
+  --success: #d6b47a;
   --danger: #ef4444;
   --warning: #f59e0b;
   --shadow-premium: 0 24px 80px rgba(0,0,0,0.48);
@@ -35,6 +35,39 @@
 
 * {
   box-sizing: border-box;
+}
+
+:where(main, section, article, aside, header, footer, nav, div, form, fieldset) {
+  min-width: 0;
+}
+
+:where(img, video, canvas, svg) {
+  max-width: 100%;
+}
+
+:where(input, textarea, select, button) {
+  max-width: 100%;
+}
+
+:where(table) {
+  max-width: 100%;
+}
+
+:where(.recharts-responsive-container, .recharts-wrapper, .chartjs-render-monitor) {
+  max-width: 100% !important;
+}
+
+.mobile-safe-panel {
+  min-width: 0;
+  max-width: 100%;
+  overflow: hidden;
+}
+
+.mobile-scroll-table {
+  width: 100%;
+  max-width: 100%;
+  overflow-x: auto;
+  -webkit-overflow-scrolling: touch;
 }
 
 html {
@@ -68,6 +101,11 @@ input,
 select,
 textarea {
   -webkit-tap-highlight-color: transparent;
+}
+
+button,
+a {
+  touch-action: manipulation;
 }
 
 select,
@@ -255,6 +293,30 @@ select {
   -webkit-background-clip: text;
   background-clip: text;
   -webkit-text-fill-color: transparent;
+}
+
+@media (max-width: 430px) {
+  html,
+  body {
+    max-width: 100%;
+    overflow-x: hidden;
+  }
+
+  body :where(p, a, button, label, li) {
+    min-width: 0;
+    overflow-wrap: break-word;
+    word-break: normal;
+  }
+
+  [class*="tracking-"] {
+    letter-spacing: 0.045em !important;
+  }
+}
+
+@media (max-width: 360px) {
+  [class*="tracking-"] {
+    letter-spacing: 0.025em !important;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

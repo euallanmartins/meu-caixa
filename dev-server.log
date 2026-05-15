@@ -1,0 +1,73 @@
+
+> meucaixa@0.1.0 dev
+> next dev --port 3000
+
+▲ Next.js 16.2.3 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.1.10:3000
+- Environments: .env.local
+✓ Ready in 594ms
+
+ HEAD /gestao/agenda 200 in 670ms (next.js: 279ms, application-code: 390ms)
+▲ Next.js 16.2.3 (Turbopack)
+- Local:         http://localhost:3000
+- Network:       http://192.168.1.10:3000
+- Environments: .env.local
+✓ Ready in 502ms
+
+ GET /** 404 in 290ms (next.js: 165ms, application-code: 125ms)
+ HEAD / 200 in 150ms (next.js: 32ms, application-code: 117ms)
+ HEAD /agendar?id=a251aedd-347a-466a-a26a-4b53d394f7ae 200 in 142ms (next.js: 25ms, application-code: 116ms)
+ GET / 200 in 84ms (next.js: 4ms, application-code: 80ms)
+ GET /barbearia/a251aedd-347a-466a-a26a-4b53d394f7ae 200 in 471ms (next.js: 407ms, application-code: 64ms)
+ GET /agendar?id=a251aedd-347a-466a-a26a-4b53d394f7ae 200 in 21ms (next.js: 3ms, application-code: 18ms)
+ GET /cliente?id=a251aedd-347a-466a-a26a-4b53d394f7ae 200 in 47ms (next.js: 30ms, application-code: 17ms)
+ GET /cliente?code=6fb31012-ef81-472b-ae76-e68c19793958&id=a251aedd-347a-466a-a26a-4b53d394f7ae 200 in 109ms (next.js: 3ms, application-code: 106ms)
+ GET /agendar?id=a251aedd-347a-466a-a26a-4b53d394f7ae 200 in 21ms (next.js: 2ms, application-code: 19ms)
+ GET /login 200 in 81ms (next.js: 27ms, application-code: 54ms)
+ GET /gestao/caixa 200 in 58ms (next.js: 33ms, application-code: 25ms)
+ GET /gestao/agenda 200 in 48ms (next.js: 30ms, application-code: 18ms)
+ GET /gestao/clientes 200 in 46ms (next.js: 27ms, application-code: 18ms)
+ GET /gestao/caixa 200 in 22ms (next.js: 3ms, application-code: 19ms)
+ GET /gestao/financeiro 200 in 41ms (next.js: 23ms, application-code: 18ms)
+ GET /gestao/agenda 200 in 19ms (next.js: 2ms, application-code: 17ms)
+ GET /gestao/equipe 200 in 67ms (next.js: 35ms, application-code: 33ms)
+ GET /gestao/relatorios 200 in 58ms (next.js: 34ms, application-code: 24ms)
+ GET /gestao/relatorios/painel 200 in 83ms (next.js: 26ms, application-code: 57ms)
+ GET /gestao/relatorios/painel 200 in 36ms (next.js: 5ms, application-code: 31ms)
+ GET /gestao/relatorios/receita 200 in 46ms (next.js: 27ms, application-code: 19ms)
+ GET /gestao/relatorios/clientes 200 in 42ms (next.js: 24ms, application-code: 18ms)
+ GET /gestao/relatorios/agendamentos 200 in 40ms (next.js: 21ms, application-code: 19ms)
+ GET /gestao/avaliacoes 200 in 47ms (next.js: 27ms, application-code: 20ms)
+ GET /gestao/equipe 200 in 44ms (next.js: 3ms, application-code: 41ms)
+ GET /gestao/agenda 200 in 21ms (next.js: 2ms, application-code: 19ms)
+ GET /gestao/relatorios 200 in 23ms (next.js: 3ms, application-code: 20ms)
+ GET /gestao/relatorios/painel 200 in 49ms (next.js: 4ms, application-code: 45ms)
+ GET /gestao/relatorios/painel 200 in 21ms (next.js: 3ms, application-code: 19ms)
+ GET /gestao/caixa 200 in 20ms (next.js: 3ms, application-code: 17ms)
+ GET /gestao/caixa 200 in 20ms (next.js: 2ms, application-code: 18ms)
+ GET /gestao/clientes 200 in 18ms (next.js: 2ms, application-code: 16ms)
+ GET /gestao/agenda 200 in 17ms (next.js: 2ms, application-code: 15ms)
+ GET /barbearia/a251aedd-347a-466a-a26a-4b53d394f7ae 200 in 102ms (next.js: 11ms, application-code: 92ms)
+ GET /agendar?id=a251aedd-347a-466a-a26a-4b53d394f7ae 200 in 23ms (next.js: 3ms, application-code: 20ms)
+ GET /agendar?id=a251aedd-347a-466a-a26a-4b53d394f7ae 200 in 36ms (next.js: 4ms, application-code: 32ms)
+ GET /cliente?id=a251aedd-347a-466a-a26a-4b53d394f7ae 200 in 18ms (next.js: 2ms, application-code: 15ms)
+ GET /login 200 in 33ms (next.js: 2ms, application-code: 30ms)
+ GET /gestao/caixa 200 in 24ms (next.js: 2ms, application-code: 22ms)
+ GET /gestao/agenda 200 in 19ms (next.js: 2ms, application-code: 17ms)
+ GET /gestao/configuracoes 200 in 47ms (next.js: 28ms, application-code: 19ms)
+ GET /gestao/equipe 200 in 19ms (next.js: 2ms, application-code: 17ms)
+ GET /gestao/avaliacoes 200 in 21ms (next.js: 2ms, application-code: 18ms)
+ GET /gestao/relatorios 200 in 20ms (next.js: 1959µs, application-code: 18ms)
+ GET /gestao/relatorios/painel 200 in 115ms (next.js: 6ms, application-code: 109ms)
+ GET /gestao/relatorios/painel 200 in 37ms (next.js: 6ms, application-code: 31ms)
+ GET /gestao/relatorios/estoque 200 in 47ms (next.js: 28ms, application-code: 19ms)
+ GET /gestao/financeiro 200 in 45ms (next.js: 2ms, application-code: 43ms)
+ GET /gestao/financeiro/saidas 200 in 2.6s (next.js: 2.3s, application-code: 204ms)
+ GET /gestao/financeiro/gorjetas 200 in 1635ms (next.js: 1580ms, application-code: 55ms)
+ GET /gestao/financeiro 200 in 57ms (next.js: 3ms, application-code: 54ms)
+ GET /gestao/financeiro/saidas 200 in 43ms (next.js: 2ms, application-code: 41ms)
+ GET /gestao/financeiro 200 in 17ms (next.js: 3ms, application-code: 14ms)
+ GET /gestao/suporte 200 in 52ms (next.js: 34ms, application-code: 18ms)
+ GET /gestao/clientes 200 in 21ms (next.js: 3ms, application-code: 18ms)
+ GET /gestao/agenda 200 in 19ms (next.js: 2ms, application-code: 17ms)

@@ -2,10 +2,13 @@
 'use client';
 
 import { useMemo } from 'react';
-import { Clock, ListChecks, Scissors, ShoppingBag, Users } from 'lucide-react';
+import { Ban, CalendarCheck, Clock, ListChecks, Percent, Repeat2, Scissors, ShoppingBag, Star, TrendingUp, Trophy, UserPlus, Users } from 'lucide-react';
 import { AreaChartBase } from '@/components/relatorios/AreaChartBase';
 import { ReportCard } from '@/components/relatorios/ReportCard';
+import { FeatureGate } from '@/components/saas/FeatureGate';
 import {
+  appointmentBarber,
+  appointmentService,
   appointmentValue,
   dailyCountSeries,
   isCancelStatus,
@@ -17,7 +20,16 @@ import {
 import { useRelatoriosContext } from '../layout';
 
 export default function PainelPage() {
-  const { agendamentos, clientesNovos, receitaMensal, loading } = useRelatoriosContext();
+  const {
+    agendamentos,
+    clientesNovos,
+    receitaMensal,
+    receitaPeriodoAnterior,
+    analyticsEvents,
+    premiumRpcMetrics,
+    barbeariaId,
+    loading,
+  } = useRelatoriosContext();
 
   const metrics = useMemo(() => {
     const total = agendamentos.length;
@@ -25,6 +37,8 @@ export default function PainelPage() {
     const canceled = agendamentos.filter((a: any) => isCancelStatus(a.status)).length;
     const noShow = agendamentos.filter((a: any) => isNoShowStatus(a.status)).length;
     const receita = receitaMensal.reduce((sum: number, item: any) => sum + Number(item.valor_total || 0), 0);
+    const receitaAnterior = receitaPeriodoAnterior.reduce((sum: number, item: any) => sum + Number(item.valor_total || 0), 0);
+    const growth = receitaAnterior > 0 ? Math.round(((receita - receitaAnterior) / receitaAnterior) * 100) : (receita > 0 ? 100 : 0);
     const paymentBreakdown = receitaMensal.reduce((acc: Record<string, number>, item: any) => {
       const payments = item.transacao_pagamentos || [];
       if (!payments.length) {
@@ -39,6 +53,13 @@ export default function PainelPage() {
     }, { dinheiro: 0, cartao: 0, pix: 0, outros: 0 });
     const ticket = done ? receita / done : 0;
     const servicesSold = agendamentos.filter((a: any) => !isCancelStatus(a.status)).length;
+    const pending = agendamentos.filter((a: any) => a.status === 'pendente').length;
+    const accepted = agendamentos.filter((a: any) => ['aceito', 'confirmado'].includes(a.status)).length;
+    const refused = agendamentos.filter((a: any) => a.status === 'recusado').length;
+    const uniqueClients = new Set(agendamentos.map((a: any) => a.clientes?.id || a.clientes?.nome).filter(Boolean));
+    const newClientNames = new Set(clientesNovos.map((client: any) => client.id || client.nome).filter(Boolean));
+    const recurringClients = Array.from(uniqueClients).filter(client => !newClientNames.has(client)).length;
+    const returnRate = safePercent(recurringClients, Math.max(1, uniqueClients.size));
     const peakHour = Object.entries(
       agendamentos.reduce((acc: Record<string, number>, item: any) => {
         if (!item.data_hora_inicio) return acc;
@@ -47,21 +68,72 @@ export default function PainelPage() {
         return acc;
       }, {})
     ).sort((a, b) => Number(b[1]) - Number(a[1]))[0]?.[0] || 'Sem dados';
+    const peakWeekDay = Object.entries(
+      agendamentos.reduce((acc: Record<string, number>, item: any) => {
+        if (!item.data_hora_inicio) return acc;
+        const day = new Date(item.data_hora_inicio).toLocaleDateString('pt-BR', { weekday: 'short' });
+        acc[day] = (acc[day] || 0) + 1;
+        return acc;
+      }, {})
+    ).sort((a, b) => Number(b[1]) - Number(a[1]))[0]?.[0] || 'Sem dados';
+    const serviceRank = Object.entries(
+      agendamentos.reduce((acc: Record<string, number>, item: any) => {
+        if (isCancelStatus(item.status)) return acc;
+        const service = appointmentService(item);
+        acc[service] = (acc[service] || 0) + 1;
+        return acc;
+      }, {})
+    ).sort((a, b) => Number(b[1]) - Number(a[1]));
+    const barberRank = Object.entries(
+      agendamentos.reduce((acc: Record<string, { total: number; receita: number }>, item: any) => {
+        const barber = appointmentBarber(item);
+        const current = acc[barber] || { total: 0, receita: 0 };
+        acc[barber] = {
+          total: current.total + 1,
+          receita: current.receita + appointmentValue(item),
+        };
+        return acc;
+      }, {})
+    ).sort((a, b) => b[1].receita - a[1].receita);
+    const analytics = analyticsEvents.reduce((acc: Record<string, number>, item: any) => {
+      acc[item.event_type] = (acc[item.event_type] || 0) + 1;
+      return acc;
+    }, {});
+    const profileViews = Number(premiumRpcMetrics?.profile_views ?? analytics.public_profile_view ?? 0);
+    const clickAgendar = Number(premiumRpcMetrics?.click_agendar ?? analytics.click_agendar ?? 0);
+    const conversion = safePercent(clickAgendar, profileViews);
 
     return {
       total,
       done,
+      pending,
       canceled,
       noShow,
+      accepted,
+      refused,
       receita,
+      receitaAnterior,
+      growth,
       ticket,
       paymentBreakdown,
       servicesSold,
       peakHour,
+      peakWeekDay,
       occupancy: total ? safePercent(done, total) : 0,
-      retention: total ? safePercent(Math.max(0, total - clientesNovos.length), total) : 0,
+      retention: returnRate,
+      recurringClients,
+      cancellationRate: safePercent(canceled, total),
+      acceptanceRate: safePercent(accepted, accepted + refused),
+      refusalRate: safePercent(refused, accepted + refused),
+      topService: serviceRank[0]?.[0] || 'Sem dados',
+      topBarber: barberRank[0]?.[0] || 'Sem dados',
+      profileViews,
+      clickAgendar,
+      clickWhatsapp: Number(premiumRpcMetrics?.click_whatsapp ?? analytics.click_whatsapp ?? 0),
+      clickInstagram: Number(premiumRpcMetrics?.click_instagram ?? analytics.click_instagram ?? 0),
+      conversion,
     };
-  }, [agendamentos, clientesNovos.length, receitaMensal]);
+  }, [agendamentos, analyticsEvents, clientesNovos, premiumRpcMetrics, receitaMensal, receitaPeriodoAnterior]);
 
   const appointmentsSeries = useMemo(() => dailyCountSeries(agendamentos), [agendamentos]);
   const occupiedSeries = useMemo(() => dailyCountSeries(agendamentos.filter((a: any) => !isCancelStatus(a.status))), [agendamentos]);
@@ -69,7 +141,7 @@ export default function PainelPage() {
   const expectedRevenueSeries = useMemo(() => dailyCountSeries(agendamentos, appointmentValue), [agendamentos]);
 
   return (
-    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_300px]">
+    <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(260px,300px)]">
       <section className="space-y-6">
         <ChartPanel title="Agendamentos e horarios reservados" loading={loading}>
           <div className="mb-4 flex flex-wrap justify-end gap-2">
@@ -96,7 +168,33 @@ export default function PainelPage() {
           />
         </ChartPanel>
 
-        <div className="grid gap-4 md:grid-cols-5">
+        <FeatureGate
+          barbeariaId={barbeariaId}
+          featureKey="premium_reports"
+          softFailOpen
+          fallbackTitle="Relatorios premium"
+          fallbackDescription="Libere os indicadores avancados de crescimento, retorno e produtividade no plano PRO."
+        >
+          <div className="grid gap-4 md:grid-cols-3 xl:grid-cols-5">
+            <ReportCard icon={TrendingUp} title="Faturamento hoje" value={money(receitaMensal.filter((item: any) => new Date(item.data).toDateString() === new Date().toDateString()).reduce((sum: number, item: any) => sum + Number(item.valor_total || 0), 0))} />
+            <ReportCard icon={ShoppingBag} title="Faturamento do mes" value={money(metrics.receita)} variation={`${metrics.growth >= 0 ? '+' : ''}${metrics.growth}% vs anterior`} />
+            <ReportCard icon={CalendarCheck} title="Concluidos" value={metrics.done} hint={`${metrics.occupancy}% de ocupacao`} />
+            <ReportCard icon={Clock} title="Pendentes" value={metrics.pending} />
+            <ReportCard icon={Ban} title="Cancelados" value={metrics.canceled} hint={`${metrics.cancellationRate}% taxa`} />
+            <ReportCard icon={ShoppingBag} title="Ticket medio" value={money(metrics.ticket)} />
+            <ReportCard icon={UserPlus} title="Clientes novos" value={clientesNovos.length} />
+            <ReportCard icon={Repeat2} title="Clientes recorrentes" value={metrics.recurringClients} hint={`${metrics.retention}% retorno`} />
+            <ReportCard icon={Trophy} title="Barbeiro destaque" value={metrics.topBarber} />
+            <ReportCard icon={Scissors} title="Servico mais vendido" value={metrics.topService} />
+            <ReportCard icon={Clock} title="Horario de pico" value={metrics.peakHour} hint={metrics.peakWeekDay} />
+            <ReportCard icon={Percent} title="Taxa de aceite" value={`${metrics.acceptanceRate}%`} hint={`${metrics.refusalRate}% recusa`} />
+            <ReportCard icon={Star} title="Views do perfil" value={metrics.profileViews} hint={`${metrics.conversion}% conversao`} />
+            <ReportCard icon={ListChecks} title="Cliques em agendar" value={metrics.clickAgendar} />
+            <ReportCard icon={Users} title="WhatsApp / Instagram" value={`${metrics.clickWhatsapp} / ${metrics.clickInstagram}`} />
+          </div>
+        </FeatureGate>
+
+        <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-5">
           <ReportCard icon={ShoppingBag} title="Ticket medio" value={money(metrics.ticket)} />
           <ReportCard icon={ListChecks} title="Servicos mais vendidos" value={metrics.servicesSold} hint="Ver relatorio" />
           <ReportCard icon={Clock} title="Horario de pico" value={metrics.peakHour} hint="Ver relatorio" />
@@ -107,7 +205,7 @@ export default function PainelPage() {
         <p className="text-sm text-white/45">Os dados exibidos sao referentes ao periodo selecionado.</p>
       </section>
 
-      <aside className="space-y-5">
+      <aside className="min-w-0 space-y-5">
         <ReportCard title="Agendamentos" value={metrics.total}>
           <ProgressRow label="Concluidos" value={metrics.done} total={metrics.total} color="bg-[#D6B47A]" />
           <ProgressRow label="Cancelados" value={metrics.canceled} total={metrics.total} color="bg-[#ff4d4d]" />
@@ -134,7 +232,7 @@ export default function PainelPage() {
 
 function ChartPanel({ title, loading, children }: { title: string; loading?: boolean; children: React.ReactNode }) {
   return (
-    <div className="relative rounded-2xl border border-white/10 bg-white/[0.04] p-6">
+    <div className="relative min-w-0 overflow-hidden rounded-2xl border border-white/10 bg-white/[0.04] p-4 sm:p-6">
       {loading && <div className="absolute inset-0 z-10 rounded-2xl bg-black/40 backdrop-blur-sm" />}
       <h3 className="mb-2 text-sm font-black uppercase tracking-[0.14em] text-white">{title}</h3>
       {children}

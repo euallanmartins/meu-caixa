@@ -5,6 +5,7 @@ import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import {
   AlertCircle,
+  ArrowLeft,
   CalendarDays,
   CircleDollarSign,
   Clock3,
@@ -34,7 +35,7 @@ function AgendarInner() {
 
   if (!barbeariaId) {
     return (
-      <div className="min-h-screen bg-[#050505] flex items-center justify-center p-6 text-white font-sans">
+      <div className="flex min-h-[100dvh] items-center justify-center bg-[#050505] p-6 font-sans text-white">
         <div className="relative w-full max-w-md">
           <div className="bg-white/5 backdrop-blur-xl border border-white/10 rounded-[2.5rem] p-10 text-center space-y-6 shadow-2xl">
             <div className="h-20 w-20 bg-red-500/10 text-red-500 rounded-3xl flex items-center justify-center mx-auto border border-red-500/20">
@@ -62,7 +63,7 @@ function AgendarInner() {
 
   if (!ag.barbearia) {
     return (
-      <div className="min-h-screen bg-[#050505] flex items-center justify-center p-6">
+      <div className="flex min-h-[100dvh] items-center justify-center bg-[#050505] p-6">
         <div className="bg-white/5 border border-white/10 rounded-3xl p-8 max-w-sm text-center space-y-4">
           <AlertCircle className="h-10 w-10 text-[#ff4d4d] mx-auto" />
           <h1 className="text-white font-black text-lg">Barbearia nao encontrada</h1>
@@ -72,29 +73,62 @@ function AgendarInner() {
     );
   }
 
+  if (ag.barbearia.agendamentos_pausados) {
+    return (
+      <div className="flex min-h-[100dvh] items-center justify-center bg-[#050505] p-6">
+        <div className="bg-white/5 border border-white/10 rounded-3xl p-8 max-w-sm text-center space-y-4">
+          <CalendarDays className="h-10 w-10 text-[#D6B47A] mx-auto" />
+          <h1 className="text-white font-black text-lg">Agendamentos pausados</h1>
+          <p className="text-white/50 text-sm">
+            Os agendamentos online desta barbearia estao temporariamente pausados.
+          </p>
+          <Link
+            href="/"
+            className="block w-full py-4 bg-[#D6B47A] rounded-2xl font-black text-black uppercase tracking-widest text-xs"
+          >
+            Voltar ao inicio
+          </Link>
+        </div>
+      </div>
+    );
+  }
+
   return (
-    <div className="min-h-screen bg-[#050505] text-white relative overflow-x-hidden">
+    <div className="relative min-h-[100dvh] overflow-x-hidden bg-[#050505] text-white">
       <div className="blob top-[-10%] left-[-10%]" />
       <div className="blob bottom-[10%] right-[-5%] bg-purple-500/10" style={{ animationDelay: '3s' }} />
 
-      <header className="liquid-glass border-b border-white/8 sticky top-0 z-50">
-        <div className="mx-auto max-w-6xl px-4 sm:px-6 py-5 flex items-center justify-between gap-4">
-          <div className="flex min-w-0 items-center gap-4">
-            <div className="h-14 w-14 rounded-2xl bg-[#D6B47A]/20 flex items-center justify-center shrink-0">
-              <Scissors className="h-7 w-7 text-[#D6B47A]" />
+      <header className="liquid-glass sticky top-0 z-50 border-b border-white/8">
+        <div className="mx-auto grid max-w-6xl grid-cols-[auto_minmax(0,1fr)_auto] items-center gap-2 px-4 py-4 sm:flex sm:justify-between sm:gap-4 sm:px-6 sm:py-5">
+          <div className="flex min-w-0 items-center gap-2 sm:gap-4">
+            <Link
+              href="/"
+              aria-label="Voltar para a pagina inicial"
+              className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/12 bg-white/[0.035] text-white/75 transition-all hover:border-[#D6B47A]/30 hover:text-[#D6B47A] sm:h-12 sm:w-auto sm:gap-1.5 sm:px-4 sm:text-xs sm:font-black sm:uppercase sm:tracking-[0.08em]"
+            >
+              <ArrowLeft className="h-4 w-4 shrink-0" />
+              <span className="hidden sm:inline">Inicio</span>
+            </Link>
+            <div className="flex h-11 w-11 shrink-0 items-center justify-center rounded-2xl bg-[#D6B47A]/20 sm:h-14 sm:w-14">
+              <Scissors className="h-5 w-5 text-[#D6B47A] sm:h-7 sm:w-7" />
             </div>
-            <div className="min-w-0">
-              <h1 className="text-xl sm:text-2xl font-black text-white truncate">{ag.barbearia.nome}</h1>
-              <p className="text-[11px] text-white/75 uppercase tracking-[0.28em] font-black">Agendamento Online</p>
-            </div>
+          </div>
+          <div className="min-w-0 px-1 sm:flex-1">
+            <h1 className="overflow-hidden text-ellipsis whitespace-nowrap text-lg font-black leading-tight text-white [overflow-wrap:normal] sm:text-2xl">
+              {ag.barbearia.nome}
+            </h1>
+            <p className="hidden overflow-hidden text-ellipsis whitespace-nowrap text-[10px] font-black uppercase leading-tight tracking-[0.12em] text-white/75 [overflow-wrap:normal] min-[390px]:block sm:text-[11px] sm:tracking-[0.28em]">
+              Agendamento Online
+            </p>
           </div>
           <Link
             href={`/cliente?id=${barbeariaId}`}
-            aria-label="Ver meus agendamentos"
-            className="flex h-12 w-12 items-center justify-center rounded-xl border border-white/15 bg-white/[0.03] text-white/80 transition-all hover:bg-white/[0.08] hover:text-white sm:w-auto sm:gap-3 sm:px-5 sm:text-sm sm:font-bold"
+            aria-label="Entrar como cliente e ver histórico de agendamentos"
+            className="flex h-11 shrink-0 items-center justify-center gap-1.5 rounded-xl border border-[#D6B47A]/25 bg-[#D6B47A]/10 px-2.5 text-center text-[10px] font-black uppercase leading-tight tracking-[0.04em] text-[#D6B47A] transition-all hover:bg-[#D6B47A]/15 hover:text-[#E7C992] min-[390px]:gap-2 min-[390px]:px-3 sm:h-12 sm:px-5 sm:text-sm sm:normal-case sm:tracking-normal"
           >
-            <CalendarDays className="h-4 w-4 text-white/50" />
-            <span className="hidden sm:inline">Ver meus agendamentos</span>
+            <User className="h-4 w-4 shrink-0 text-[#D6B47A]" />
+            <span className="whitespace-nowrap [overflow-wrap:normal] min-[390px]:hidden">Cliente</span>
+            <span className="hidden whitespace-nowrap [overflow-wrap:normal] min-[390px]:inline">Minha área</span>
           </Link>
         </div>
       </header>
@@ -121,15 +155,20 @@ function AgendarInner() {
             {ag.step === 1 && (
               <StepIdentificacao
                 cliente={ag.cliente}
+                barbeariaId={barbeariaId}
+                authUser={ag.authUser}
+                reminderChannel={ag.reminderChannel}
                 onSubmit={(cliente) => {
                   ag.setCliente(cliente);
                   ag.nextStep();
                   ag.loadServicos();
                 }}
-                onLookup={ag.lookupCliente}
-                onGoogleLogin={ag.loginComGoogle}
-                isGoogleConnected={ag.isClienteAutenticado}
-                authEmail={ag.authUser?.email}
+                onAuthLogin={ag.loginCliente}
+                onAuthSignup={ag.signupCliente}
+                resetPassword={ag.resetPassword}
+                onVincularAuth={ag.vincularClienteAuthAtual}
+                onLogout={ag.logoutCliente}
+                onReminderChannelChange={ag.setReminderChannel}
                 onVoltar={() => window.history.back()}
               />
             )}
@@ -172,13 +211,21 @@ function AgendarInner() {
                 loading={ag.loadingSlots}
                 duracaoTotal={ag.duracaoTotal}
                 barbeiroId={ag.barbeiro?.id ?? null}
+                reminderChannel={ag.reminderChannel}
                 onSelectData={(d) => {
                   ag.setData(d);
                   ag.loadSlots(d, ag.barbeiro?.id ?? null, ag.duracaoTotal);
                 }}
                 onSelectHorario={ag.setHorario}
+                onReminderChannelChange={ag.setReminderChannel}
+                onJoinWaitlist={ag.entrarListaEspera}
+                waitlistLoading={ag.waitlistLoading}
+                waitlistMessage={ag.waitlistMessage}
                 onVoltar={ag.prevStep}
-                onContinuar={ag.nextStep}
+                onContinuar={() => {
+                  ag.loadCustomForms();
+                  ag.nextStep();
+                }}
               />
             )}
 
@@ -192,8 +239,13 @@ function AgendarInner() {
                 observacoes={ag.observacoesAgendamento}
                 valorFormatado={ag.valorFormatado}
                 duracaoFormatada={ag.duracaoFormatada}
+                reminderChannel={ag.reminderChannel}
                 submitting={ag.submitting}
+                customFormFields={ag.customFormFields}
+                customFormAnswers={ag.customFormAnswers}
                 onObservacoes={ag.setObservacoes}
+                onReminderChannelChange={ag.setReminderChannel}
+                onCustomFormAnswer={ag.setCustomFormAnswer}
                 onConfirmar={ag.confirmarAgendamento}
                 onVoltar={ag.prevStep}
                 onEditarStep={ag.goToStep}
@@ -208,6 +260,7 @@ function AgendarInner() {
                 data={ag.data}
                 horario={ag.horario}
                 valorFormatado={ag.valorFormatado}
+                message={ag.confirmationMessage}
                 barbeariaId={barbeariaId}
                 onReagendar={ag.resetAgendamento}
               />

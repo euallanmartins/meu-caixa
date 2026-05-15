@@ -1,8 +1,10 @@
 'use client';
 
-import { useEffect, useState } from 'react';
+import { useCallback, useEffect, useState } from 'react';
 import { Image as ImageIcon, Trash2, Upload } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
+import { PUBLIC_IMAGE_ACCEPT, publicImageExtension, TEMPORARY_FAILURE_MESSAGE, validatePublicImageFile } from '@/lib/security/upload';
+import { safeImageUrl } from '@/lib/security/url';
 
 type PortfolioPhoto = {
   id: string;
@@ -17,7 +19,7 @@ export function BarbeariaPortfolioManager({ barbeariaId }: { barbeariaId: string
   const [busy, setBusy] = useState(false);
   const [message, setMessage] = useState<string | null>(null);
 
-  async function load() {
+  const load = useCallback(async () => {
     if (!barbeariaId) return;
     setLoading(true);
     setMessage(null);
@@ -37,11 +39,11 @@ export function BarbeariaPortfolioManager({ barbeariaId }: { barbeariaId: string
     }
 
     setLoading(false);
-  }
+  }, [barbeariaId]);
 
   useEffect(() => {
     load();
-  }, [barbeariaId]);
+  }, [load]);
 
   async function upload(file: File | null) {
     if (!file || !barbeariaId || busy) return;
@@ -49,7 +51,13 @@ export function BarbeariaPortfolioManager({ barbeariaId }: { barbeariaId: string
     setMessage(null);
 
     try {
-      const ext = file.name.split('.').pop() || 'jpg';
+      const fileError = validatePublicImageFile(file);
+      if (fileError) {
+        setMessage(fileError);
+        return;
+      }
+
+      const ext = publicImageExtension(file);
       const path = `barbearias/${barbeariaId}/portfolio/${crypto.randomUUID()}.${ext}`;
       const { error: uploadError } = await supabase.storage
         .from('barber-photos')
@@ -68,8 +76,8 @@ export function BarbeariaPortfolioManager({ barbeariaId }: { barbeariaId: string
 
       if (insertError) throw insertError;
       await load();
-    } catch (err) {
-      setMessage(err instanceof Error ? err.message : 'Erro ao enviar foto.');
+    } catch {
+      setMessage(TEMPORARY_FAILURE_MESSAGE);
     } finally {
       setBusy(false);
     }
@@ -112,7 +120,7 @@ export function BarbeariaPortfolioManager({ barbeariaId }: { barbeariaId: string
           <label className="flex h-12 cursor-pointer items-center justify-center gap-2 rounded-2xl bg-[#D6B47A] px-5 text-sm font-black text-black">
             <Upload className="h-4 w-4" />
             Adicionar foto
-            <input type="file" accept="image/*" className="hidden" onChange={event => upload(event.target.files?.[0] ?? null)} />
+            <input type="file" accept={PUBLIC_IMAGE_ACCEPT} className="hidden" onChange={event => upload(event.target.files?.[0] ?? null)} />
           </label>
         </div>
 
@@ -133,20 +141,23 @@ export function BarbeariaPortfolioManager({ barbeariaId }: { barbeariaId: string
           </div>
         ) : (
           <div className="mt-6 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-            {photos.map(photo => (
-              <div key={photo.id} className="group relative aspect-square overflow-hidden rounded-3xl border border-white/10 bg-white/[0.035]">
-                <img src={photo.url} alt="" className="h-full w-full object-cover" />
-                <button
-                  type="button"
-                  onClick={() => remove(photo)}
-                  disabled={busy}
-                  className="absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-black/70 text-[#ff5c5c] backdrop-blur transition-all hover:bg-[#ff5c5c] hover:text-white"
-                  aria-label="Remover foto"
-                >
-                  <Trash2 className="h-4 w-4" />
-                </button>
-              </div>
-            ))}
+            {photos.map(photo => {
+              const photoUrl = safeImageUrl(photo.url, { allowBlob: false });
+              return (
+                <div key={photo.id} className="group relative aspect-square overflow-hidden rounded-3xl border border-white/10 bg-white/[0.035]">
+                  {photoUrl ? <img src={photoUrl} alt="" className="h-full w-full object-cover" /> : <ImageIcon className="m-auto h-10 w-10 text-white/25" />}
+                  <button
+                    type="button"
+                    onClick={() => remove(photo)}
+                    disabled={busy}
+                    className="absolute right-3 top-3 flex h-10 w-10 items-center justify-center rounded-2xl bg-black/70 text-[#ff5c5c] backdrop-blur transition-all hover:bg-[#ff5c5c] hover:text-white"
+                    aria-label="Remover foto"
+                  >
+                    <Trash2 className="h-4 w-4" />
+                  </button>
+                </div>
+              );
+            })}
           </div>
         )}
       </div>

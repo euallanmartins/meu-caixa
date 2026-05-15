@@ -21,6 +21,9 @@ export function useRelatorios({
     caixaSessoes: any[];
     funcionarios: any[];
     horasTrabalhadas: any[];
+    receitaPeriodoAnterior: any[];
+    analyticsEvents: any[];
+    premiumRpcMetrics: Record<string, any> | null;
   }>({
     agendamentos: [],
     clientesNovos: [],
@@ -29,6 +32,9 @@ export function useRelatorios({
     caixaSessoes: [],
     funcionarios: [],
     horasTrabalhadas: [],
+    receitaPeriodoAnterior: [],
+    analyticsEvents: [],
+    premiumRpcMetrics: null,
   });
 
   // FIX: fetchData não precisa ser useCallback — o fetch é gerenciado pelo useEffect abaixo
@@ -37,6 +43,11 @@ export function useRelatorios({
 
     const startISO = formatISO(start);
     const endISO = formatISO(end);
+    const periodMs = Math.max(1, end.getTime() - start.getTime());
+    const previousStart = new Date(start.getTime() - periodMs);
+    const previousEnd = new Date(start.getTime() - 1);
+    const previousStartISO = formatISO(previousStart);
+    const previousEndISO = formatISO(previousEnd);
 
     try {
       // 1. Agendamentos no intervalo (FIX: 'barbeiros' em vez de 'profissionais')
@@ -44,7 +55,7 @@ export function useRelatorios({
         .from('agendamentos')
         .select(`
           id, data_hora_inicio, data_hora_fim, status, valor_estimado,
-          clientes(nome, telefone),
+          clientes(id, nome, telefone),
           barbeiros(id, nome),
           servicos(nome, valor)
         `)
@@ -70,6 +81,13 @@ export function useRelatorios({
         .lte('data', endISO)
         .order('data', { ascending: true });
 
+      const { data: receitaAnterior } = await supabase
+        .from('transacoes')
+        .select('id, valor_total, data, barbeiro_id, servico_id')
+        .eq('barbearia_id', bId)
+        .gte('data', previousStartISO)
+        .lte('data', previousEndISO);
+
       // 4. Estoque (geral, sem filtro temporal)
       const { data: estq } = await supabase
         .from('produtos')
@@ -92,6 +110,21 @@ export function useRelatorios({
         .eq('barbearia_id', bId)
         .eq('ativo', true);
 
+      const { data: events } = await supabase
+        .from('analytics_events')
+        .select('id, event_type, event_source, metadata, created_at')
+        .eq('barbearia_id', bId)
+        .gte('created_at', startISO)
+        .lte('created_at', endISO);
+
+      const startDate = start.toISOString().slice(0, 10);
+      const endDate = end.toISOString().slice(0, 10);
+      const { data: premiumRpc } = await supabase.rpc('rpc_get_dashboard_premium_metrics', {
+        p_barbearia_id: bId,
+        p_start_date: startDate,
+        p_end_date: endDate,
+      });
+
       setData({
         agendamentos: agends || [],
         clientesNovos: clientes || [],
@@ -100,6 +133,9 @@ export function useRelatorios({
         caixaSessoes: sessoes || [],
         funcionarios: funcs || [],
         horasTrabalhadas: [],
+        receitaPeriodoAnterior: receitaAnterior || [],
+        analyticsEvents: events || [],
+        premiumRpcMetrics: (premiumRpc as Record<string, any> | null) || null,
       });
     } catch (err) {
       console.error('[useRelatorios] Erro ao buscar dados:', err);

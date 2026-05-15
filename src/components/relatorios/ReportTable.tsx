@@ -12,9 +12,9 @@ interface ReportTableProps<T> {
 
 export function ReportTable<T>({ columns, data, empty = 'Sem dados para o periodo.' }: ReportTableProps<T>) {
   return (
-    <div className="overflow-hidden rounded-2xl border border-white/10 bg-white/[0.035]">
-      <div className="overflow-x-auto">
-        <table className="w-full min-w-[720px] text-left">
+    <div className="mobile-safe-panel rounded-2xl border border-white/10 bg-white/[0.035]">
+      <div className="mobile-scroll-table">
+        <table className="w-full min-w-[640px] text-left sm:min-w-[720px]">
           <thead className="border-b border-white/8 bg-white/[0.035]">
             <tr>
               {columns.map(column => (
@@ -40,7 +40,7 @@ export function ReportTable<T>({ columns, data, empty = 'Sem dados para o period
                   {columns.map(column => (
                     <td
                       key={column.header}
-                      className={`px-5 py-4 text-sm text-white/75 ${column.align === 'right' ? 'text-right' : 'text-left'}`}
+                      className={`max-w-[240px] break-words px-5 py-4 text-sm text-white/75 ${column.align === 'right' ? 'text-right' : 'text-left'}`}
                     >
                       {column.cell(row)}
                     </td>

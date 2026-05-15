@@ -1,6 +1,6 @@
 ﻿'use client';
 
-import React, { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 import {
   setYear, setMonth,
@@ -22,6 +22,8 @@ interface DateFilterModalProps {
   onApply: (start: Date, end: Date, mode: DateFilterMode) => void;
 }
 
+type DateFilterModalContentProps = Omit<DateFilterModalProps, 'isOpen'>;
+
 const MODES: { id: DateFilterMode; label: string }[] = [
   { id: 'mes', label: 'MÃªs' },
   { id: 'dia', label: 'Hoje' },
@@ -38,29 +40,22 @@ const MONTHS = [
 
 export function DateFilterModal({
   isOpen,
+  ...props
+}: DateFilterModalProps) {
+  if (!isOpen) return null;
+
+  return <DateFilterModalContent key={`${props.currentMode}-${props.startDate.toISOString()}`} {...props} />;
+}
+
+function DateFilterModalContent({
   onClose,
   currentMode,
   startDate,
   onApply,
-}: DateFilterModalProps) {
+}: DateFilterModalContentProps) {
   const [tempMode, setTempMode] = useState<DateFilterMode>(currentMode);
   const [viewYear, setViewYear] = useState(startDate.getFullYear());
   const [selectedMonth, setSelectedMonth] = useState(startDate.getMonth());
-
-  // FIX: Sincronizar estado ao abrir o modal
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  useEffect(() => {
-    if (isOpen) {
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setTempMode(currentMode);
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setViewYear(startDate.getFullYear());
-      // eslint-disable-next-line react-hooks/set-state-in-effect
-      setSelectedMonth(startDate.getMonth());
-    }
-  }, [isOpen]);
-
-  if (!isOpen) return null;
 
   const handleApply = () => {
     const now = new Date();

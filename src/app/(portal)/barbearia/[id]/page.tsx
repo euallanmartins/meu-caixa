@@ -7,6 +7,7 @@ import {
   AlertCircle,
   ArrowLeft,
   CalendarDays,
+  BadgePercent,
   ChevronRight,
   Clock3,
   MessageSquareText,
@@ -20,6 +21,8 @@ import {
 import type { LucideIcon } from 'lucide-react';
 import { DEFAULT_PUBLIC_BARBEARIA } from '@/lib/publicBarbearia';
 import { supabasePublic } from '@/lib/supabase';
+import { safeExternalHref, safeImageUrl } from '@/lib/security/url';
+import { trackAnalyticsEvent } from '@/lib/analytics/trackEvent';
 
 type Horario = {
   dia_semana: number;
@@ -66,6 +69,17 @@ type Avaliacao = {
   created_at: string;
 };
 
+type Promocao = {
+  id: string;
+  titulo: string;
+  descricao: string | null;
+  data_inicio: string;
+  data_fim: string;
+  horario_inicio: string | null;
+  horario_fim: string | null;
+  status: string;
+};
+
 type Barbearia = {
   id: string;
   nome: string;
@@ -76,6 +90,7 @@ type Barbearia = {
   logo_url?: string | null;
   capa_url?: string | null;
   ativo?: boolean | null;
+  status?: string | null;
   mensagem_boas_vindas?: string | null;
 };
 
@@ -113,6 +128,7 @@ function fallbackBarbearia(barbeariaId: string): Barbearia | null {
     endereco: DEFAULT_PUBLIC_BARBEARIA.cidade,
     descricao: 'Agendamento online para a dsbarbershop.',
     ativo: true,
+    status: 'active',
   };
 }
 
@@ -157,6 +173,7 @@ export default function PublicBarbeariaPage() {
   const [horarios, setHorarios] = useState<Horario[]>([]);
   const [fotos, setFotos] = useState<FotoPortfolio[]>([]);
   const [avaliacoes, setAvaliacoes] = useState<Avaliacao[]>([]);
+  const [promocoes, setPromocoes] = useState<Promocao[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
@@ -175,25 +192,32 @@ export default function PublicBarbeariaPage() {
         }
 
         const shopRes = await withTimeout<QueryResult<Barbearia>>(
-          supabasePublic.from('barbearias').select('*').eq('id', barbeariaId).maybeSingle(),
+          supabasePublic
+            .from('barbearias')
+            .select('*')
+            .eq('id', barbeariaId)
+            .eq('status', 'active')
+            .eq('ativo', true)
+            .maybeSingle(),
           { data: null, error: null }
         );
 
         if (!active) return;
 
         const shop = shopRes.data || fallbackBarbearia(barbeariaId);
-        if (!shop || shop.ativo === false) throw new Error('Barbearia nao encontrada.');
+        if (!shop || shop.ativo === false || shop.status !== 'active') throw new Error('Barbearia nao encontrada.');
 
         setBarbearia(shop);
         setLoading(false);
 
         const emptyList = { data: [], error: null };
-        const [servicesRes, barbersRes, hoursRes, photosRes, reviewsRes] = await Promise.all([
+        const [servicesRes, barbersRes, hoursRes, photosRes, reviewsRes, promosRes] = await Promise.all([
           withTimeout<QueryResult<Servico[]>>(supabasePublic.from('servicos').select('*').eq('barbearia_id', barbeariaId).order('nome'), emptyList),
           withTimeout<QueryResult<Barbeiro[]>>(supabasePublic.from('barbeiros').select('*').eq('barbearia_id', barbeariaId).order('nome'), emptyList),
           withTimeout<QueryResult<Horario[]>>(supabasePublic.from('horarios_funcionamento').select('*').eq('barbearia_id', barbeariaId).order('dia_semana'), emptyList),
           withTimeout<QueryResult<FotoPortfolio[]>>(supabasePublic.from('barbearia_fotos').select('*').eq('barbearia_id', barbeariaId).eq('tipo', 'portfolio').order('ordem'), emptyList),
           withTimeout<QueryResult<Avaliacao[]>>(supabasePublic.from('avaliacoes').select('*').eq('barbearia_id', barbeariaId).eq('status', 'aprovada').order('created_at', { ascending: false }), emptyList),
+          withTimeout<QueryResult<Promocao[]>>(supabasePublic.from('promocoes').select('*').eq('barbearia_id', barbeariaId).eq('status', 'ativo').order('data_inicio'), emptyList),
         ]);
 
         if (!active) return;
@@ -203,6 +227,7 @@ export default function PublicBarbeariaPage() {
         setHorarios((hoursRes.data || []) as Horario[]);
         setFotos((photosRes.data || []) as FotoPortfolio[]);
         setAvaliacoes((reviewsRes.data || []) as Avaliacao[]);
+        setPromocoes((promosRes.data || []) as Promocao[]);
       } catch (err) {
         if (active) setError(err instanceof Error ? err.message : 'Erro ao carregar barbearia.');
       } finally {
@@ -225,13 +250,25 @@ export default function PublicBarbeariaPage() {
     url: servico.foto_url || '',
     ordem: 0,
   }));
+  const safeCapaUrl = safeImageUrl(barbearia?.capa_url, { allowBlob: false });
+  const safeLogoUrl = safeImageUrl(barbearia?.logo_url, { allowBlob: false });
   const reviewAverage = avaliacoes.length
     ? avaliacoes.reduce((acc, review) => acc + Number(review.nota || 0), 0) / avaliacoes.length
     : 0;
 
+  useEffect(() => {
+    if (!barbearia?.id) return;
+    void trackAnalyticsEvent({
+      barbearia_id: barbearia.id,
+      event_type: 'public_profile_view',
+      event_source: 'public_profile',
+      metadata: { route: '/barbearia/[id]' },
+    });
+  }, [barbearia?.id]);
+
   if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#050505] text-white">
+      <div className="flex min-h-[100dvh] items-center justify-center bg-[#050505] text-white">
         <div className="h-12 w-12 animate-spin rounded-full border-4 border-[#D6B47A] border-t-transparent" />
       </div>
     );
@@ -239,7 +276,7 @@ export default function PublicBarbeariaPage() {
 
   if (error || !barbearia) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#050505] p-5 text-white">
+      <div className="flex min-h-[100dvh] items-center justify-center bg-[#050505] p-5 text-white">
         <div className="w-full max-w-sm rounded-3xl border border-white/10 bg-white/[0.04] p-8 text-center">
           <AlertCircle className="mx-auto h-11 w-11 text-[#ff5c5c]" />
           <h1 className="mt-4 text-xl font-black">Barbearia nao encontrada</h1>
@@ -253,13 +290,13 @@ export default function PublicBarbeariaPage() {
   }
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-[#050505] text-white">
+    <div className="min-h-[100dvh] overflow-x-hidden bg-[#050505] text-white">
       <header className="sticky top-0 z-30 border-b border-white/8 bg-[#050505]/85 px-4 py-4 backdrop-blur-2xl">
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-3">
           <Link href="/" className="flex h-11 w-11 items-center justify-center rounded-2xl border border-white/12 bg-white/[0.04]">
             <ArrowLeft className="h-5 w-5" />
           </Link>
-          <Link href={agendarHref} prefetch={false} className="flex h-11 items-center justify-center gap-2 rounded-2xl bg-[#D6B47A] px-5 text-sm font-black text-black">
+          <Link href={agendarHref} prefetch={false} onClick={() => void trackAnalyticsEvent({ barbearia_id: barbearia.id, event_type: 'click_agendar', event_source: 'public_profile_header' })} className="flex h-11 items-center justify-center gap-2 rounded-2xl bg-[#D6B47A] px-5 text-sm font-black text-black">
             Agendar
             <ChevronRight className="h-4 w-4" />
           </Link>
@@ -269,15 +306,15 @@ export default function PublicBarbeariaPage() {
       <main className="mx-auto max-w-6xl px-4 pb-28 pt-5 sm:px-6 lg:pb-16">
         <section className="grid gap-6 lg:grid-cols-[minmax(0,1fr)_360px] lg:items-end">
           <div className="relative min-h-[420px] overflow-hidden rounded-[2rem] border border-white/10 bg-white/[0.035] p-5 sm:p-8">
-            {barbearia.capa_url ? (
-              <img src={barbearia.capa_url} alt="" className="absolute inset-0 h-full w-full object-cover opacity-55" />
+            {safeCapaUrl ? (
+              <img src={safeCapaUrl} alt="" className="absolute inset-0 h-full w-full object-cover opacity-55" />
             ) : (
               <div className="absolute inset-0 bg-[radial-gradient(circle_at_20%_20%,rgba(214,180,122,0.22),transparent_34%),linear-gradient(135deg,rgba(255,255,255,0.08),transparent)]" />
             )}
             <div className="absolute inset-0 bg-gradient-to-t from-[#050505] via-[#050505]/62 to-transparent" />
             <div className="relative z-10 flex h-full min-h-[360px] flex-col justify-end">
               <div className="flex h-20 w-20 items-center justify-center overflow-hidden rounded-3xl border border-[#D6B47A]/25 bg-[#D6B47A]/12 text-[#D6B47A]">
-                {barbearia.logo_url ? <img src={barbearia.logo_url} alt="" className="h-full w-full object-cover" /> : <Scissors className="h-10 w-10" />}
+                {safeLogoUrl ? <img src={safeLogoUrl} alt="" className="h-full w-full object-cover" /> : <Scissors className="h-10 w-10" />}
               </div>
               <div className="mt-6 flex flex-wrap items-center gap-3">
                 <span className={`rounded-full border px-3 py-1 text-xs font-black uppercase tracking-[0.12em] ${status.open ? 'border-[#D6B47A]/25 bg-[#D6B47A]/12 text-[#D6B47A]' : 'border-white/10 bg-white/8 text-white/60'}`}>
@@ -288,7 +325,7 @@ export default function PublicBarbeariaPage() {
                   4,9
                 </span>
               </div>
-              <h1 className="mt-4 text-5xl font-black leading-none tracking-tight sm:text-7xl">{barbearia.nome}</h1>
+              <h1 className="mt-4 max-w-full break-words text-4xl font-black leading-none tracking-tight min-[390px]:text-5xl sm:text-7xl">{barbearia.nome}</h1>
               <p className="mt-4 max-w-2xl text-base leading-relaxed text-white/68 sm:text-lg">
                 {barbearia.descricao || barbearia.mensagem_boas_vindas || 'Perfil publico da barbearia com servicos, profissionais e horarios disponiveis para agendamento.'}
               </p>
@@ -301,7 +338,7 @@ export default function PublicBarbeariaPage() {
               <Info icon={Phone} title="Contato" text={barbearia.whatsapp || barbearia.telefone || 'Contato nao informado'} />
               <Info icon={ShieldCheck} title="Agendamento seguro" text="Seus dados ficam vinculados apenas a esta barbearia." />
             </div>
-            <Link href={agendarHref} prefetch={false} className="mt-6 flex h-14 items-center justify-center gap-3 rounded-2xl bg-[#D6B47A] text-base font-black text-black">
+            <Link href={agendarHref} prefetch={false} onClick={() => void trackAnalyticsEvent({ barbearia_id: barbearia.id, event_type: 'click_agendar', event_source: 'public_profile_sidebar' })} className="mt-6 flex h-14 items-center justify-center gap-3 rounded-2xl bg-[#D6B47A] text-base font-black text-black">
               Agendar agora
               <ChevronRight className="h-5 w-5" />
             </Link>
@@ -316,10 +353,38 @@ export default function PublicBarbeariaPage() {
           <section className="mt-8">
             <SectionTitle title="Portfolio" subtitle="Fotos e resultados publicados pela barbearia" />
             <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-              {portfolio.slice(0, 8).map((foto) => (
-                <div key={foto.id} className="aspect-square overflow-hidden rounded-3xl border border-white/10 bg-white/[0.035]">
-                  <img src={foto.url} alt="" className="h-full w-full object-cover" />
-                </div>
+              {portfolio.slice(0, 8).map((foto) => {
+                const fotoUrl = safeImageUrl(foto.url, { allowBlob: false });
+                if (!fotoUrl) return null;
+                return (
+                  <div key={foto.id} className="aspect-square overflow-hidden rounded-3xl border border-white/10 bg-white/[0.035]">
+                    <img src={fotoUrl} alt="" className="h-full w-full object-cover" />
+                  </div>
+                );
+              })}
+            </div>
+          </section>
+        )}
+
+        {promocoes.length > 0 && (
+          <section className="mt-10">
+            <SectionTitle title="Promocoes ativas" subtitle="Ofertas publicadas pela barbearia" />
+            <div className="mt-4 grid gap-3 lg:grid-cols-2">
+              {promocoes.map(promocao => (
+                <article key={promocao.id} className="rounded-3xl border border-[#D6B47A]/25 bg-[#D6B47A]/[0.06] p-5">
+                  <div className="flex items-start gap-4">
+                    <div className="flex h-14 w-14 shrink-0 items-center justify-center rounded-2xl bg-[#D6B47A]/12 text-[#D6B47A]">
+                      <BadgePercent className="h-7 w-7" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-black text-white">{promocao.titulo}</h3>
+                      <p className="mt-2 text-sm leading-relaxed text-white/58">{promocao.descricao || 'Promocao disponivel por tempo limitado.'}</p>
+                      <p className="mt-3 text-xs font-black uppercase tracking-[0.16em] text-[#D6B47A]">
+                        {promocao.data_inicio} ate {promocao.data_fim}
+                      </p>
+                    </div>
+                  </div>
+                </article>
               ))}
             </div>
           </section>
@@ -343,8 +408,8 @@ export default function PublicBarbeariaPage() {
                       <Scissors className="h-7 w-7" />
                     </div>
                     <div className="min-w-0 flex-1">
-                      <div className="flex items-start justify-between gap-3">
-                        <h3 className="text-xl font-black text-white">{servico.nome}</h3>
+                      <div className="flex flex-col gap-2 min-[430px]:flex-row min-[430px]:items-start min-[430px]:justify-between">
+                        <h3 className="min-w-0 break-words text-xl font-black text-white">{servico.nome}</h3>
                         <p className="shrink-0 text-lg font-black text-[#D6B47A]">{money(servico.valor)}</p>
                       </div>
                       <p className="mt-2 line-clamp-2 text-sm leading-relaxed text-white/55">{servico.descricao || 'Servico profissional disponivel para agendamento.'}</p>
@@ -366,25 +431,28 @@ export default function PublicBarbeariaPage() {
             {barbeiros.length === 0 ? (
               <Empty icon={UserRound} text="Nenhum profissional ativo cadastrado." />
             ) : (
-              barbeiros.map(barbeiro => (
-                <article key={barbeiro.id} className="rounded-3xl border border-white/10 bg-white/[0.035] p-4">
-                  <div className="flex gap-4">
-                    <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[#D6B47A]/12 text-2xl font-black text-[#D6B47A]">
-                      {barbeiro.foto_url ? <img src={barbeiro.foto_url} alt="" className="h-full w-full object-cover" /> : barbeiro.nome.charAt(0)}
-                    </div>
-                    <div className="min-w-0">
-                      <div className="flex flex-wrap items-center gap-2">
-                        <h3 className="text-xl font-black text-white">{barbeiro.nome}</h3>
-                        {barbeiro.destaque_label && <span className="rounded-full bg-[#D6B47A]/12 px-2 py-1 text-[10px] font-black text-[#D6B47A]">{barbeiro.destaque_label}</span>}
+              barbeiros.map(barbeiro => {
+                const fotoUrl = safeImageUrl(barbeiro.foto_url, { allowBlob: false });
+                return (
+                  <article key={barbeiro.id} className="rounded-3xl border border-white/10 bg-white/[0.035] p-4">
+                    <div className="flex gap-4">
+                      <div className="flex h-20 w-20 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[#D6B47A]/12 text-2xl font-black text-[#D6B47A]">
+                        {fotoUrl ? <img src={fotoUrl} alt="" className="h-full w-full object-cover" /> : barbeiro.nome.charAt(0)}
                       </div>
-                      <p className="mt-1 text-sm text-white/55">{barbeiro.titulo || barbeiro.especialidade || 'Profissional'}</p>
-                      <p className="mt-2 text-sm font-bold text-yellow-300">
-                        {Number(barbeiro.avaliacao || 5).toFixed(1)} ({barbeiro.total_avaliacoes || 0} avaliacoes)
-                      </p>
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-center gap-2">
+                          <h3 className="text-xl font-black text-white">{barbeiro.nome}</h3>
+                          {barbeiro.destaque_label && <span className="rounded-full bg-[#D6B47A]/12 px-2 py-1 text-[10px] font-black text-[#D6B47A]">{barbeiro.destaque_label}</span>}
+                        </div>
+                        <p className="mt-1 text-sm text-white/55">{barbeiro.titulo || barbeiro.especialidade || 'Profissional'}</p>
+                        <p className="mt-2 text-sm font-bold text-yellow-300">
+                          {Number(barbeiro.avaliacao || 5).toFixed(1)} ({barbeiro.total_avaliacoes || 0} avaliacoes)
+                        </p>
+                      </div>
                     </div>
-                  </div>
-                </article>
-              ))
+                  </article>
+                );
+              })
             )}
           </div>
         </section>
@@ -432,11 +500,16 @@ export default function PublicBarbeariaPage() {
                   <p className="mt-4 text-sm leading-relaxed text-white/65">{review.depoimento}</p>
                   {!!review.fotos?.length && (
                     <div className="mt-4 grid grid-cols-4 gap-2">
-                      {review.fotos.slice(0, 4).map((foto, index) => (
-                        <a key={`${review.id}-${index}`} href={foto} target="_blank" rel="noreferrer" className="aspect-square overflow-hidden rounded-2xl border border-white/10 bg-black/30">
-                          <img src={foto} alt="" className="h-full w-full object-cover" />
-                        </a>
-                      ))}
+                      {review.fotos.slice(0, 4).map((foto, index) => {
+                        const fotoUrl = safeImageUrl(foto, { allowBlob: false });
+                        const fotoHref = safeExternalHref(foto);
+                        if (!fotoUrl || !fotoHref) return null;
+                        return (
+                          <a key={`${review.id}-${index}`} href={fotoHref} target="_blank" rel="noreferrer" className="aspect-square overflow-hidden rounded-2xl border border-white/10 bg-black/30">
+                            <img src={fotoUrl} alt="" className="h-full w-full object-cover" />
+                          </a>
+                        );
+                      })}
                     </div>
                   )}
                 </article>
@@ -464,8 +537,8 @@ export default function PublicBarbeariaPage() {
         </section>
       </main>
 
-      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-[#050505]/90 p-4 backdrop-blur-2xl lg:hidden">
-        <Link href={agendarHref} prefetch={false} className="flex h-14 items-center justify-center gap-3 rounded-2xl bg-[#D6B47A] font-black text-black">
+      <div className="fixed inset-x-0 bottom-0 z-30 border-t border-white/10 bg-[#050505]/90 px-4 pb-[calc(env(safe-area-inset-bottom)+1rem)] pt-4 backdrop-blur-2xl lg:hidden">
+        <Link href={agendarHref} prefetch={false} onClick={() => void trackAnalyticsEvent({ barbearia_id: barbearia.id, event_type: 'click_agendar', event_source: 'public_profile_mobile_cta' })} className="flex h-14 items-center justify-center gap-3 rounded-2xl bg-[#D6B47A] font-black text-black">
           Agendar agora
           <ChevronRight className="h-5 w-5" />
         </Link>

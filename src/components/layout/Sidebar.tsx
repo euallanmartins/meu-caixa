@@ -13,6 +13,12 @@ const SHARED_ITEMS = [
   { id: 'clientes', label: 'Clientes', icon: 'Users',    href: '/gestao/clientes', testId: 'nav-clientes' },
 ] as const;
 
+const BARBER_ITEMS = [
+  { id: 'agenda', label: 'Minha agenda', icon: 'Calendar', href: '/gestao/agenda', testId: 'nav-agenda' },
+  { id: 'ganhos', label: 'Meus ganhos', icon: 'Wallet', href: '/gestao/meus-ganhos', testId: 'nav-meus-ganhos' },
+  { id: 'perfil', label: 'Meu perfil', icon: 'UserRound', href: '/gestao/meu-perfil', testId: 'nav-meu-perfil' },
+] as const;
+
 const ADMIN_ITEMS = [
   {
     id: 'caixa',
@@ -24,18 +30,24 @@ const ADMIN_ITEMS = [
   },
   { id: 'financeiro', label: 'Financeiro', icon: 'TrendingUp', href: '/gestao/financeiro', testId: 'nav-financeiro' },
   { id: 'equipe',     label: 'Equipe',     icon: 'UserCheck',  href: '/gestao/equipe',     testId: 'nav-equipe' },
+  { id: 'lista-espera', label: 'Lista de espera', icon: 'CalendarClock', href: '/gestao/lista-espera', testId: 'nav-lista-espera' },
+  { id: 'marketing', label: 'Marketing', icon: 'Megaphone', href: '/gestao/marketing', testId: 'nav-marketing' },
+  { id: 'promocoes', label: 'Promoções', icon: 'BadgePercent', href: '/gestao/promocoes', testId: 'nav-promocoes' },
+  { id: 'formularios', label: 'Formularios', icon: 'FileText', href: '/gestao/formularios', testId: 'nav-formularios' },
   { id: 'avaliacoes', label: 'Avaliacoes', icon: 'MessageSquareText', href: '/gestao/avaliacoes', testId: 'nav-avaliacoes' },
   { id: 'relatorios', label: 'Relatórios', icon: 'BarChart2',  href: '/gestao/relatorios', testId: 'nav-relatorios' },
 ] as const;
 
 const BOTTOM_ITEMS = [
+  { id: 'onboarding',     label: 'Onboarding',     icon: 'Rocket',     href: '/gestao/onboarding',     testId: 'nav-onboarding' },
+  { id: 'links',          label: 'Links publicos', icon: 'Link2',      href: '/gestao/configuracoes/links', testId: 'nav-links' },
   { id: 'configuracoes', label: 'Configurações', icon: 'Settings',   href: '/gestao/configuracoes', testId: 'nav-configuracoes' },
   { id: 'suporte',       label: 'Suporte',       icon: 'HelpCircle', href: '/gestao/suporte',       testId: 'nav-suporte' },
 ] as const;
 
 export function Sidebar() {
   const { isCollapsed, toggleCollapse } = useSidebar();
-  const { isAdmin, loading: roleLoading } = useUserRole();
+  const { isAdmin, isBarbeiro, loading: roleLoading } = useUserRole();
   const [user, setUser] = useState<any>(null);
 
   useEffect(() => {
@@ -49,11 +61,13 @@ export function Sidebar() {
     window.location.href = '/login';
   };
 
-  const visibleMenuItems = isAdmin
+  const visibleMenuItems = isBarbeiro
+    ? [...BARBER_ITEMS]
+    : isAdmin
     ? [...SHARED_ITEMS, ...ADMIN_ITEMS]
     : [...SHARED_ITEMS];
 
-  const roleLabel = isAdmin ? 'Administrador' : 'Barbeiro';
+  const roleLabel = isBarbeiro ? 'Barbeiro' : isAdmin ? 'Administrador' : 'Equipe';
   const roleColor = isAdmin ? 'text-[#D6B47A]' : 'text-blue-400';
 
   return (
@@ -64,7 +78,7 @@ export function Sidebar() {
         bg-[#0a0a0a]/95 backdrop-blur-2xl border-r border-white/10
         transition-all duration-300 ease-[cubic-bezier(0.4,0,0.2,1)]
         ${isCollapsed ? 'w-[72px]' : 'w-64'}
-        h-screen sticky top-0 shrink-0
+        h-[100dvh] sticky top-0 shrink-0
       `}
     >
       {/* Header / Logo */}
@@ -120,7 +134,7 @@ export function Sidebar() {
               Sistema
             </p>
           )}
-          {BOTTOM_ITEMS.map(item => (
+          {!isBarbeiro && BOTTOM_ITEMS.map(item => (
             <SidebarItem key={item.id} {...item} isCollapsed={isCollapsed} icon={item.icon as any} />
           ))}
         </div>

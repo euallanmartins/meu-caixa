@@ -42,8 +42,8 @@ export function DataTable<T>({ columns, data, emptyMessage = 'Não existem infor
   }, [data, sortKey, sortDir]);
 
   return (
-    <div className="w-full overflow-x-auto no-scrollbar">
-      <table className="w-full text-left border-collapse">
+    <div className="mobile-scroll-table no-scrollbar rounded-2xl">
+      <table className="min-w-[640px] w-full border-collapse text-left">
         <thead>
           <tr className="border-b border-white/10">
             {columns.map((col) => (
@@ -86,7 +86,7 @@ export function DataTable<T>({ columns, data, emptyMessage = 'Não existem infor
             sortedData.map((row, idx) => (
               <tr key={idx} className="border-b border-white/5 hover:bg-white/5 transition-colors group">
                 {columns.map((col) => (
-                   <td key={String(col.key)} className="py-4 px-2 text-xs font-bold text-white/80 group-hover:text-white">
+                   <td key={String(col.key)} className="max-w-[220px] break-words py-4 px-2 text-xs font-bold text-white/80 group-hover:text-white">
                       {col.format ? col.format((row as any)[col.key], row) : (row as any)[col.key] || '-'}
                    </td>
                 ))}

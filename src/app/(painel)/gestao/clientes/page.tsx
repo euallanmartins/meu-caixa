@@ -3,8 +3,10 @@
 
 import { useEffect, useState } from 'react';
 import { useRouter } from 'next/navigation';
+import { Users } from 'lucide-react';
 import { supabase } from '@/lib/supabase';
 import { ClientsView } from '@/components/ClientsView';
+import { ProfessionalMobileHeader } from '@/components/layout/ProfessionalMobileHeader';
 
 export default function ClientesPage() {
   const router = useRouter();
@@ -51,6 +53,12 @@ export default function ClientesPage() {
 
   return (
     <div className="space-y-8">
+      <ProfessionalMobileHeader
+        icon={Users}
+        title="Clientes"
+        subtitle="Base, historico e relacionamento"
+      />
+
       <div className="hidden lg:block">
          <h2 className="text-3xl font-black text-white uppercase tracking-tight">Gestão CRM</h2>
          <p className="text-sm text-white/40 font-bold uppercase tracking-widest mt-1">Base de dados e segmentação de clientes</p>

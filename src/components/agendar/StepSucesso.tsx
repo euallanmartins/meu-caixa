@@ -14,6 +14,7 @@ interface Props {
   data:                 Date | null;
   horario:              string | null;
   valorFormatado:       string;
+  message:              string;
   barbeariaId:           string;
   onReagendar:          () => void;
 }
@@ -50,6 +51,7 @@ export function StepSucesso({
   data,
   horario,
   valorFormatado,
+  message,
   barbeariaId,
   onReagendar,
 }: Props) {
@@ -115,7 +117,7 @@ export function StepSucesso({
             Tudo certo, {primeiroNome}!
           </h2>
           <p className="text-white/50 text-sm mt-1 max-w-xs mx-auto">
-            Seu agendamento foi realizado. Aguarde a confirmação da barbearia.
+            {message}
           </p>
         </div>
       </div>

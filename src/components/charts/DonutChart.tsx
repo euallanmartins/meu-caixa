@@ -61,8 +61,8 @@ export default function DonutChart({
 
   return (
     <div
-      className="relative flex items-center justify-center"
-      style={{ height: `${height}px` }}
+      className="relative flex w-full max-w-full items-center justify-center overflow-hidden"
+      style={{ height: `${Math.max(170, height)}px` }}
     >
       <Doughnut data={chartData} options={options} />
 

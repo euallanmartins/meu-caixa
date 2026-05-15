@@ -11,14 +11,14 @@ import {
   ClipboardCheck,
   Clock,
   Loader2,
-  Mail,
-  MessageCircle,
   Scissors,
   ShieldCheck,
   Sparkles,
   User,
 } from 'lucide-react';
-import type { Barbeiro, ClienteInput, Servico } from '@/hooks/useAgendamento';
+import type { Barbeiro, ClienteInput, CustomFormField, ReminderChannel, Servico } from '@/hooks/useAgendamento';
+import { safeSupabaseImageUrl } from '@/lib/security/url';
+import { ReminderChannelSelector } from './ReminderChannelSelector';
 
 interface Props {
   cliente: ClienteInput;
@@ -29,8 +29,13 @@ interface Props {
   observacoes: string;
   valorFormatado: string;
   duracaoFormatada: string;
+  reminderChannel: ReminderChannel;
   submitting: boolean;
+  customFormFields?: CustomFormField[];
+  customFormAnswers?: Record<string, string>;
   onObservacoes: (obs: string) => void;
+  onReminderChannelChange: (channel: ReminderChannel) => void;
+  onCustomFormAnswer?: (fieldId: string, value: string) => void;
   onConfirmar: () => Promise<boolean>;
   onVoltar: () => void;
   onEditarStep?: (step: 1 | 2 | 3 | 4) => void;
@@ -48,8 +53,13 @@ export function StepConfirmacao({
   observacoes,
   valorFormatado,
   duracaoFormatada,
+  reminderChannel,
   submitting,
+  customFormFields = [],
+  customFormAnswers = {},
   onObservacoes,
+  onReminderChannelChange,
+  onCustomFormAnswer,
   onConfirmar,
   onVoltar,
   onEditarStep,
@@ -57,6 +67,7 @@ export function StepConfirmacao({
   const dataFormatada = data
     ? format(data, "EEEE, d 'de' MMMM 'de' yyyy", { locale: ptBR })
     : 'Data nao selecionada';
+  const barbeiroFotoUrl = safeSupabaseImageUrl(barbeiro?.foto_url, '/barber-portrait.jpg');
 
   return (
     <div className="animate-in slide-in-from-right-4 duration-300">
@@ -124,7 +135,7 @@ export function StepConfirmacao({
             </div>
             <div className="grid gap-4 sm:grid-cols-[112px_minmax(0,1fr)] sm:items-center">
               <div className="relative h-[112px] overflow-hidden rounded-xl bg-white/5">
-                <Image src={barbeiro?.foto_url || '/barber-portrait.jpg'} alt="" fill sizes="112px" className="object-cover opacity-90" />
+                <Image src={barbeiroFotoUrl} alt="" fill sizes="112px" className="object-cover opacity-90" />
               </div>
               <div>
                 <div className="flex flex-wrap items-center gap-2">
@@ -202,22 +213,11 @@ export function StepConfirmacao({
               Lembrete do agendamento
             </h3>
             <p className="mb-4 text-sm text-white/55">Como voce prefere receber seu lembrete?</p>
-            <div className="grid gap-2">
-              <div className="flex items-center justify-between rounded-xl border border-[#D6B47A]/30 bg-[#D6B47A]/8 px-4 py-3">
-                <span className="flex items-center gap-3 font-black text-white">
-                  <MessageCircle className="h-5 w-5 text-[#D6B47A]" />
-                  WhatsApp
-                </span>
-                <span className="h-4 w-4 rounded-full border-4 border-[#D6B47A]" />
-              </div>
-              <div className="flex items-center justify-between rounded-xl border border-white/10 bg-white/[0.03] px-4 py-3">
-                <span className="flex items-center gap-3 font-black text-white/80">
-                  <Mail className="h-5 w-5 text-white/45" />
-                  E-mail
-                </span>
-                <span className="h-4 w-4 rounded-full border-2 border-white/35" />
-              </div>
-            </div>
+            <ReminderChannelSelector
+              name="confirmacao-reminder-channel"
+              value={reminderChannel}
+              onChange={onReminderChannelChange}
+            />
           </section>
 
           <section className="rounded-2xl border border-white/10 bg-white/[0.035] p-5">
@@ -252,6 +252,36 @@ export function StepConfirmacao({
           className="w-full resize-none rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white outline-none transition-all placeholder:text-white/25 focus:border-[#D6B47A]/40"
         />
       </div>
+
+      {customFormFields.length > 0 && (
+        <div className="mt-5 rounded-2xl border border-white/10 bg-white/[0.035] p-4">
+          <h3 className="mb-4 text-sm font-black text-white">Perguntas da barbearia</h3>
+          <div className="grid gap-4">
+            {customFormFields.map(field => (
+              <label key={field.id} className="block space-y-2">
+                <span className="text-[11px] font-black uppercase tracking-[0.18em] text-white/45">
+                  {field.label}{field.required ? ' *' : ''}
+                </span>
+                {field.type === 'textarea' ? (
+                  <textarea
+                    rows={3}
+                    value={customFormAnswers[field.id] || ''}
+                    onChange={event => onCustomFormAnswer?.(field.id, event.target.value)}
+                    className="w-full resize-none rounded-xl border border-white/10 bg-white/[0.04] px-4 py-3 text-sm text-white outline-none transition-all placeholder:text-white/25 focus:border-[#D6B47A]/40"
+                  />
+                ) : (
+                  <input
+                    type="text"
+                    value={customFormAnswers[field.id] || ''}
+                    onChange={event => onCustomFormAnswer?.(field.id, event.target.value)}
+                    className="h-12 w-full rounded-xl border border-white/10 bg-white/[0.04] px-4 text-sm text-white outline-none transition-all placeholder:text-white/25 focus:border-[#D6B47A]/40"
+                  />
+                )}
+              </label>
+            ))}
+          </div>
+        </div>
+      )}
 
       <div className="mt-5 flex gap-4 rounded-2xl border border-white/10 bg-white/[0.035] p-4">
         <ShieldCheck className="mt-1 h-5 w-5 shrink-0 text-[#f4d06f]" />

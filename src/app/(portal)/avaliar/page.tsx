@@ -17,6 +17,9 @@ import {
 } from 'lucide-react';
 import { supabasePublic } from '@/lib/supabase';
 import { publicBarbearias } from '@/lib/publicBarbearia';
+import { safeImageUrl } from '@/lib/security/url';
+import { trackAnalyticsEvent } from '@/lib/analytics/trackEvent';
+import { INVALID_IMAGE_FORMAT_MESSAGE, PUBLIC_IMAGE_ACCEPT, TEMPORARY_FAILURE_MESSAGE, publicImageExtension, validatePublicImageFile } from '@/lib/security/upload';
 
 type PublicBarbearia = {
   id: string;
@@ -24,10 +27,10 @@ type PublicBarbearia = {
   endereco?: string | null;
   logo_url?: string | null;
   ativo?: boolean | null;
+  status?: string | null;
 };
 
 const MAX_PHOTOS = 4;
-const MAX_PHOTO_SIZE = 5 * 1024 * 1024;
 
 function AvaliarInner() {
   const searchParams = useSearchParams();
@@ -52,6 +55,8 @@ function AvaliarInner() {
       const { data, error: dbError } = await supabasePublic
         .from('barbearias')
         .select('*')
+        .eq('status', 'active')
+        .eq('ativo', true)
         .order('nome');
 
       if (!active) return;
@@ -59,7 +64,7 @@ function AvaliarInner() {
       if (dbError || !data?.length) {
         setBarbearias(publicBarbearias.map(item => ({ ...item, endereco: item.cidade })));
       } else {
-        setBarbearias(((data || []) as PublicBarbearia[]).filter(item => item.ativo !== false));
+        setBarbearias(((data || []) as PublicBarbearia[]).filter(item => item.ativo !== false && item.status === 'active'));
       }
 
       setLoading(false);
@@ -83,13 +88,9 @@ function AvaliarInner() {
 
     const accepted: File[] = [];
     for (const file of Array.from(nextFiles)) {
-      if (!file.type.startsWith('image/')) {
-        setError('Envie apenas arquivos de imagem.');
-        return;
-      }
-
-      if (file.size > MAX_PHOTO_SIZE) {
-        setError('Cada foto pode ter no maximo 5MB.');
+      const fileError = validatePublicImageFile(file);
+      if (fileError) {
+        setError(fileError);
         return;
       }
 
@@ -126,7 +127,7 @@ function AvaliarInner() {
       const photoUrls: string[] = [];
 
       for (const [index, file] of files.entries()) {
-        const ext = file.name.split('.').pop() || 'jpg';
+        const ext = publicImageExtension(file);
         const path = `barbearias/${barbeariaId}/avaliacoes/${avaliacaoId}/${index + 1}-${Date.now()}.${ext}`;
         const { error: uploadError } = await supabasePublic.storage
           .from('barber-photos')
@@ -150,6 +151,13 @@ function AvaliarInner() {
 
       if (rpcError) throw rpcError;
 
+      void trackAnalyticsEvent({
+        barbearia_id: barbeariaId,
+        event_type: 'review_created',
+        event_source: 'public_review',
+        metadata: { nota, fotos: photoUrls.length },
+      });
+
       setSuccessId(String(data || avaliacaoId));
       setNome('');
       setNota(5);
@@ -159,7 +167,8 @@ function AvaliarInner() {
       if (uploadedPaths.length) {
         await supabasePublic.storage.from('barber-photos').remove(uploadedPaths);
       }
-      setError(err instanceof Error ? err.message : 'Nao foi possivel enviar sua avaliacao.');
+      const message = err instanceof Error ? err.message : '';
+      setError(/mime|extension|formato|tipo/i.test(message) ? INVALID_IMAGE_FORMAT_MESSAGE : TEMPORARY_FAILURE_MESSAGE);
     } finally {
       setSubmitting(false);
     }
@@ -215,26 +224,29 @@ function AvaliarInner() {
                 </div>
               ) : (
                 <div className="mt-4 space-y-3">
-                  {barbearias.map(shop => (
-                    <button
-                      key={shop.id}
-                      type="button"
-                      onClick={() => setBarbeariaId(shop.id)}
-                      className={`flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition-all ${
-                        barbeariaId === shop.id
-                          ? 'border-[#D6B47A]/45 bg-[#D6B47A]/10'
-                          : 'border-white/10 bg-white/[0.03] hover:border-white/20'
-                      }`}
-                    >
-                      <div className="flex h-13 w-13 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[#D6B47A]/12 text-[#D6B47A]">
-                        {shop.logo_url ? <img src={shop.logo_url} alt="" className="h-full w-full object-cover" /> : <Scissors className="h-6 w-6" />}
-                      </div>
-                      <div className="min-w-0">
-                        <p className="truncate font-black text-white">{shop.nome}</p>
-                        <p className="truncate text-xs text-white/45">{shop.endereco || 'Agendamento online'}</p>
-                      </div>
-                    </button>
-                  ))}
+                  {barbearias.map(shop => {
+                    const logoUrl = safeImageUrl(shop.logo_url, { allowBlob: false });
+                    return (
+                      <button
+                        key={shop.id}
+                        type="button"
+                        onClick={() => setBarbeariaId(shop.id)}
+                        className={`flex w-full items-center gap-3 rounded-2xl border p-3 text-left transition-all ${
+                          barbeariaId === shop.id
+                            ? 'border-[#D6B47A]/45 bg-[#D6B47A]/10'
+                            : 'border-white/10 bg-white/[0.03] hover:border-white/20'
+                        }`}
+                      >
+                        <div className="flex h-13 w-13 shrink-0 items-center justify-center overflow-hidden rounded-2xl bg-[#D6B47A]/12 text-[#D6B47A]">
+                          {logoUrl ? <img src={logoUrl} alt="" className="h-full w-full object-cover" /> : <Scissors className="h-6 w-6" />}
+                        </div>
+                        <div className="min-w-0">
+                          <p className="truncate font-black text-white">{shop.nome}</p>
+                          <p className="truncate text-xs text-white/45">{shop.endereco || 'Agendamento online'}</p>
+                        </div>
+                      </button>
+                    );
+                  })}
                 </div>
               )}
             </aside>
@@ -305,7 +317,7 @@ function AvaliarInner() {
                       <label className="flex aspect-square cursor-pointer flex-col items-center justify-center rounded-2xl border border-dashed border-white/14 bg-white/[0.03] text-center text-white/55">
                         <Camera className="h-8 w-8 text-[#D6B47A]" />
                         <span className="mt-2 text-xs font-black uppercase tracking-[0.12em]">Adicionar</span>
-                        <input type="file" accept="image/*" multiple className="hidden" onChange={event => handleFiles(event.target.files)} />
+                        <input type="file" accept={PUBLIC_IMAGE_ACCEPT} multiple className="hidden" onChange={event => handleFiles(event.target.files)} />
                       </label>
                     )}
                   </div>

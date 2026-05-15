@@ -119,7 +119,7 @@ export default function AreaChartLW({
   }, [data, projectionData, color, height, formatValue]);
 
   return (
-    <div className="relative w-full overflow-hidden" ref={chartContainerRef}>
+    <div className="relative w-full max-w-full overflow-hidden" ref={chartContainerRef} style={{ height }}>
       <div
         ref={tooltipRef}
         className="absolute z-10 hidden p-3 pointer-events-none rounded-xl"

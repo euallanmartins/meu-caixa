@@ -1,6 +1,6 @@
 'use client';
 
-import { Suspense, useCallback, useEffect, useMemo, useState, type ComponentType } from 'react';
+import { Suspense, useCallback, useEffect, useMemo, useState, type ComponentType, type FormEvent } from 'react';
 import Link from 'next/link';
 import { useRouter, useSearchParams } from 'next/navigation';
 import {
@@ -18,9 +18,11 @@ import {
   Mail,
   Scissors,
   Search,
+  XCircle,
   User,
 } from 'lucide-react';
 import { supabase, supabasePublic } from '@/lib/supabase';
+import { buildPublicUrl } from '@/lib/publicUrl';
 
 type ClienteAgendamento = {
   agendamento_id: string;
@@ -33,6 +35,14 @@ type ClienteAgendamento = {
   servico_nome: string | null;
   barbeiro_nome: string | null;
   barbearia_nome: string | null;
+  idempotency_key?: string | null;
+  servico_id?: string | null;
+  barbeiro_id?: string | null;
+  cliente_confirmou?: boolean | null;
+  pode_cancelar?: boolean | null;
+  pode_reagendar?: boolean | null;
+  avaliacao_id?: string | null;
+  avaliado?: boolean | null;
 };
 
 type StoredCliente = {
@@ -40,6 +50,16 @@ type StoredCliente = {
   nome?: string;
   email?: string;
   telefone?: string;
+};
+
+type ClienteWaitlistEntry = {
+  id: string;
+  barbearia_id: string;
+  cliente_nome: string;
+  data_preferida: string | null;
+  periodo_preferido: string;
+  status: string;
+  created_at: string;
 };
 
 const statusStyle: Record<string, string> = {
@@ -63,6 +83,19 @@ const statusLabel: Record<string, string> = {
   atendido: 'Concluido',
   realizado: 'Concluido',
 };
+const PLATFORM_ROLES = new Set(['platform_admin', 'super_admin']);
+const PROFESSIONAL_ROLES = new Set(['owner', 'admin', 'proprietario', 'barbeiro', 'funcionario', 'gerente', ...PLATFORM_ROLES]);
+const AUTH_TIMEOUT_MS = 15000;
+
+type LoginResponse = {
+  userId?: string;
+  profile?: {
+    role?: string | null;
+    barbearia_id?: string | null;
+  } | null;
+  hasClientAccount?: boolean;
+  error?: string;
+};
 
 function formatCurrency(value: number | null) {
   return new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(value || 0));
@@ -76,12 +109,35 @@ function formatDateTime(value: string) {
   };
 }
 
+function withTimeout<T>(promise: PromiseLike<T>, label: string, ms = AUTH_TIMEOUT_MS) {
+  let timer: ReturnType<typeof setTimeout> | undefined;
+
+  return Promise.race([
+    promise,
+    new Promise<T>((_, reject) => {
+      timer = setTimeout(() => reject(new Error(`${label} demorou demais para responder.`)), ms);
+    }),
+  ]).finally(() => {
+    if (timer) clearTimeout(timer);
+  });
+}
+
+function isDuplicateSignup(errorMessage?: string | null, identities?: unknown[] | null) {
+  const message = (errorMessage || '').toLowerCase();
+  return (
+    message.includes('already')
+    || message.includes('registered')
+    || message.includes('exists')
+    || (Array.isArray(identities) && identities.length === 0)
+  );
+}
+
 function ClientePortalInner() {
-  const searchParams = useSearchParams();
   const router = useRouter();
+  const searchParams = useSearchParams();
   const barbeariaId = searchParams.get('id');
-  const nextParam = searchParams.get('next');
-  const agendarPath = barbeariaId ? `/agendar?id=${barbeariaId}` : '/';
+  const hasBarbeariaContext = Boolean(barbeariaId);
+  const appointmentHref = barbeariaId ? `/agendar?id=${barbeariaId}` : '/';
 
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -89,11 +145,19 @@ function ClientePortalInner() {
   const [accountEmail, setAccountEmail] = useState<string | null>(null);
   const [barbeariaNome, setBarbeariaNome] = useState('Barbearia');
   const [agendamentos, setAgendamentos] = useState<ClienteAgendamento[]>([]);
+  const [waitlistEntries, setWaitlistEntries] = useState<ClienteWaitlistEntry[]>([]);
   const [loading, setLoading] = useState(true);
   const [submitting, setSubmitting] = useState(false);
   const [loaded, setLoaded] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [authHelpVisible, setAuthHelpVisible] = useState(false);
+  const [authNotice, setAuthNotice] = useState<string | null>(null);
+  const [authActionLoading, setAuthActionLoading] = useState<'create' | 'email' | null>(null);
   const [activeTab, setActiveTab] = useState<'proximos' | 'historico'>('proximos');
+  const [actionMessage, setActionMessage] = useState<string | null>(null);
+  const [actionLoadingId, setActionLoadingId] = useState<string | null>(null);
+  const [rescheduleTarget, setRescheduleTarget] = useState<ClienteAgendamento | null>(null);
+  const [rescheduleValue, setRescheduleValue] = useState('');
 
   const ensureClienteLink = useCallback(async (userEmail?: string | null) => {
     if (typeof window === 'undefined') return;
@@ -130,66 +194,84 @@ function ClientePortalInner() {
     setLoaded(false);
 
     const { data, error: rpcError } = await supabase.rpc('rpc_cliente_meus_agendamentos_auth', {
-      p_barbearia_id: null,
+      p_barbearia_id: barbeariaId ?? null,
     });
     if (rpcError) throw rpcError;
 
     const rows = (data || []) as ClienteAgendamento[];
     setAgendamentos(rows);
+
+    const { data: waitlistData, error: waitlistError } = await supabase
+      .from('waitlist_entries')
+      .select('id, barbearia_id, cliente_nome, data_preferida, periodo_preferido, status, created_at')
+      .eq(barbeariaId ? 'barbearia_id' : 'status', barbeariaId ?? 'aguardando')
+      .order('created_at', { ascending: false });
+
+    if (!waitlistError) setWaitlistEntries((waitlistData || []) as ClienteWaitlistEntry[]);
     setLoaded(true);
-  }, []);
+  }, [barbeariaId]);
+
+  const retryLoadAppointments = useCallback(async () => {
+    try {
+      await loadAppointments();
+    } catch (err) {
+      console.error('[ClientePortal] Erro ao tentar recarregar agenda:', err);
+      setError('Nao foi possivel carregar seus agendamentos agora. Tente novamente em instantes.');
+      setAgendamentos([]);
+      setLoaded(true);
+    }
+  }, [loadAppointments]);
 
   useEffect(() => {
     let active = true;
 
     async function bootstrap() {
-      if (!barbeariaId) {
-        setLoading(false);
-        return;
-      }
-
-      const { data: shop } = await supabasePublic
-        .from('barbearias')
-        .select('nome')
-        .eq('id', barbeariaId)
-        .maybeSingle();
-
-      if (active && shop?.nome) setBarbeariaNome(shop.nome);
-
-      const oauthError = searchParams.get('error_description') || searchParams.get('error');
-      if (oauthError && active) {
-        setError('O login com Google nao foi concluido. Tente novamente pelo botao de Google no agendamento.');
-      }
-
       const { data: { session } } = await supabase.auth.getSession();
       const user = session?.user ?? (await supabase.auth.getUser()).data.user;
       if (!active) return;
 
-      const pendingAfterLogin = sessionStorage.getItem('meu_caixa_google_after_login');
-      const shouldReturnToSchedule = nextParam === 'agendar';
+      if (user) {
+        const { data: profile, error: profileError } = await supabase
+          .from('profiles')
+          .select('role, barbearia_id')
+          .eq('id', user.id)
+          .maybeSingle();
 
-      if (!user) {
-        if (oauthError && shouldReturnToSchedule) {
-          sessionStorage.removeItem('meu_caixa_google_after_login');
-          router.replace(agendarPath);
+        if (profileError) {
+          console.warn('[ClientePortal] Nao foi possivel verificar perfil profissional; seguindo como cliente.', {
+            code: profileError.code,
+            message: profileError.message,
+          });
+        }
+        if (profile?.role && PLATFORM_ROLES.has(profile.role)) {
+          router.replace(profile.barbearia_id ? '/gestao/agenda' : '/admin/plataforma');
           return;
         }
 
+        if (!barbeariaId && profile?.role && PROFESSIONAL_ROLES.has(profile.role) && profile?.barbearia_id) {
+          router.replace('/gestao/agenda');
+          return;
+        }
+      }
+
+      if (barbeariaId) {
+        const { data: shop } = await supabasePublic
+          .from('barbearias')
+          .select('nome')
+          .eq('id', barbeariaId)
+          .maybeSingle();
+
+        if (active && shop?.nome) setBarbeariaNome(shop.nome);
+      } else if (active) {
+        setBarbeariaNome('Meu Caixa');
+      }
+
+      if (!user) {
         setLoading(false);
         return;
       }
 
       setAccountEmail(user.email ?? null);
-
-      if (shouldReturnToSchedule) {
-        sessionStorage.removeItem('meu_caixa_google_after_login');
-        router.replace(pendingAfterLogin?.startsWith('/agendar') ? pendingAfterLogin : agendarPath);
-        return;
-      }
-
-      if (pendingAfterLogin?.startsWith('/agendar')) {
-        sessionStorage.removeItem('meu_caixa_google_after_login');
-      }
 
       try {
         await ensureClienteLink(user.email);
@@ -210,7 +292,7 @@ function ClientePortalInner() {
     return () => {
       active = false;
     };
-  }, [barbeariaId, agendarPath, ensureClienteLink, loadAppointments, nextParam, router, searchParams]);
+  }, [barbeariaId, ensureClienteLink, loadAppointments, router]);
 
   const proximos = useMemo(
     () => agendamentos.filter(item => (
@@ -231,30 +313,71 @@ function ClientePortalInner() {
   const visibleAppointments = activeTab === 'proximos' ? proximos : historico;
   const firstName = accountEmail?.split('@')[0] || 'cliente';
 
-  async function handleLogin(e: React.FormEvent) {
+  async function handleLogin(e: FormEvent) {
     e.preventDefault();
     setSubmitting(true);
     setError(null);
+    setAuthNotice(null);
 
-    const { data, error: loginError } = await supabase.auth.signInWithPassword({
-      email: email.toLowerCase().trim(),
-      password,
-    });
-
-    if (loginError) {
-      setError('E-mail ou senha incorretos.');
-      setSubmitting(false);
-      return;
-    }
-
-    setAccountEmail(data.user?.email ?? email.toLowerCase().trim());
+    const normalizedEmail = email.toLowerCase().trim();
 
     try {
-      await ensureClienteLink(data.user?.email ?? email.toLowerCase().trim());
+      const { data: authData, error: authError } = await withTimeout(
+        supabase.auth.signInWithPassword({
+          email: normalizedEmail,
+          password,
+        }),
+        'Login',
+      );
+
+      if (authError || !authData.user) {
+        const authMessage = authError?.message?.toLowerCase() || '';
+        setAuthHelpVisible(true);
+        setError(
+          authMessage.includes('email not confirmed')
+            ? 'Seu e-mail ainda precisa ser confirmado antes de entrar.'
+            : 'E-mail ou senha incorretos. Se voce agendou antes de criar uma senha, crie seu acesso de cliente abaixo.'
+        );
+        return;
+      }
+
+      setAuthHelpVisible(false);
+      const response = await withTimeout(
+        fetch('/auth/login', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ email: normalizedEmail, password }),
+        }),
+        'Login',
+      );
+
+      const result = await response.json() as LoginResponse;
+
+      if (!response.ok) {
+        setError(result.error || 'E-mail ou senha incorretos.');
+        return;
+      }
+
+      if (result.profile?.role && PLATFORM_ROLES.has(result.profile.role)) {
+        router.replace(result.profile.barbearia_id ? '/gestao/agenda' : '/admin/plataforma');
+        return;
+      }
+
+      if (result.profile?.role && result.profile.barbearia_id && PROFESSIONAL_ROLES.has(result.profile.role)) {
+        router.replace('/gestao/agenda');
+        return;
+      }
+
+      setAccountEmail(normalizedEmail);
+
+      await ensureClienteLink(normalizedEmail);
       await loadAppointments();
     } catch (err) {
       console.error('[ClientePortal] Erro apos login:', err);
-      setError('Login feito, mas essa conta nao possui agendamentos de cliente vinculados.');
+      setAuthHelpVisible(true);
+      setError(err instanceof Error && err.message.includes('demorou demais')
+        ? 'Nao foi possivel entrar agora. Verifique a conexao e tente novamente.'
+        : 'Nao foi possivel carregar seus agendamentos agora. Tente novamente em instantes.');
       setAgendamentos([]);
       setLoaded(true);
     } finally {
@@ -262,32 +385,97 @@ function ClientePortalInner() {
     }
   }
 
-  async function handleGoogleLogin() {
-    if (!barbeariaId) {
-      setError('Link da barbearia invalido.');
+  async function createClientAccess() {
+    const normalizedEmail = email.toLowerCase().trim();
+    if (!normalizedEmail.includes('@') || password.length < 6) {
+      setError('Informe um e-mail valido e uma senha com pelo menos 6 caracteres.');
       return;
     }
 
-    setSubmitting(true);
+    setAuthActionLoading('create');
     setError(null);
-    sessionStorage.setItem(
-      'meu_caixa_google_after_login',
-      nextParam === 'agendar' ? agendarPath : `/cliente?id=${barbeariaId}`,
-    );
+    setAuthNotice(null);
 
-    const { error: authError } = await supabase.auth.signInWithOAuth({
-      provider: 'google',
-      options: {
-        redirectTo: `${window.location.origin}/cliente?id=${barbeariaId}${nextParam === 'agendar' ? '&next=agendar' : ''}`,
-        queryParams: {
-          prompt: 'select_account',
-        },
-      },
-    });
+    try {
+      const { data, error: signUpError } = await withTimeout(
+        supabase.auth.signUp({
+          email: normalizedEmail,
+          password,
+          options: {
+            emailRedirectTo: buildPublicUrl(barbeariaId ? `/cliente?id=${barbeariaId}` : '/cliente'),
+            data: {
+              account_type: 'cliente',
+              barbearia_id: barbeariaId ?? null,
+              full_name: normalizedEmail.split('@')[0],
+              telefone: '',
+            },
+          },
+        }),
+        'Criacao de acesso',
+      );
 
-    if (authError) {
-      setError(authError.message);
-      setSubmitting(false);
+      if (isDuplicateSignup(signUpError?.message, data.user?.identities)) {
+        setAuthHelpVisible(true);
+        setError('Essa conta ja existe. Use a recuperacao de senha para receber um novo link de acesso.');
+        return;
+      }
+
+      if (signUpError) throw signUpError;
+
+      if (!data.session) {
+        setAuthHelpVisible(true);
+        setAuthNotice('Acesso criado. Confira seu e-mail para confirmar a conta antes de entrar.');
+        return;
+      }
+
+      await fetch('/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: normalizedEmail, password }),
+      });
+
+      setAccountEmail(normalizedEmail);
+      setAuthHelpVisible(false);
+      setAuthNotice('Acesso criado com sucesso.');
+      await ensureClienteLink(normalizedEmail);
+      await loadAppointments();
+    } catch (err) {
+      console.error('[ClientePortal] Erro ao criar acesso de cliente:', err);
+      setAuthHelpVisible(true);
+      setError('Nao foi possivel criar seu acesso agora. Tente novamente em instantes.');
+    } finally {
+      setAuthActionLoading(null);
+    }
+  }
+
+  async function sendAccessEmail() {
+    const normalizedEmail = email.toLowerCase().trim();
+    if (!normalizedEmail.includes('@')) {
+      setError('Informe um e-mail valido para receber o link.');
+      return;
+    }
+
+    setAuthActionLoading('email');
+    setError(null);
+    setAuthNotice(null);
+
+    const redirectTo = buildPublicUrl(barbeariaId ? `/cliente?id=${barbeariaId}` : '/cliente');
+
+    try {
+      const [{ error: resetError }, { error: resendError }] = await Promise.all([
+        supabase.auth.resetPasswordForEmail(normalizedEmail, { redirectTo }),
+        supabase.auth.resend({ type: 'signup', email: normalizedEmail, options: { emailRedirectTo: redirectTo } }),
+      ]);
+
+      if (resetError && resendError) throw resetError;
+
+      setAuthHelpVisible(true);
+      setAuthNotice('Se existir uma conta para este e-mail, enviamos um link de confirmacao ou recuperacao.');
+    } catch (err) {
+      console.error('[ClientePortal] Erro ao enviar link de acesso:', err);
+      setError('Nao foi possivel enviar o link agora. Tente novamente em instantes.');
+    } finally {
+      setAuthActionLoading(null);
     }
   }
 
@@ -299,25 +487,97 @@ function ClientePortalInner() {
     setPassword('');
   }
 
-  if (!barbeariaId) {
+  async function handleCancelAppointment(appointment: ClienteAgendamento) {
+    if (!window.confirm('Cancelar este agendamento?')) return;
+
+    setActionLoadingId(appointment.agendamento_id);
+    setActionMessage(null);
+    setError(null);
+
+    try {
+      const { data, error: rpcError } = await supabase.rpc('rpc_cliente_cancelar_agendamento', {
+        p_agendamento_id: appointment.agendamento_id,
+      });
+
+      if (rpcError) throw rpcError;
+
+      const result = data as { success?: boolean; message?: string } | null;
+      if (result && result.success === false) {
+        setError(result.message || 'Nao foi possivel cancelar este agendamento.');
+        return;
+      }
+
+      setActionMessage('Agendamento cancelado com sucesso.');
+      await loadAppointments();
+    } catch (err) {
+      console.error('[ClientePortal] Erro ao cancelar agendamento:', err);
+      setError('Nao foi possivel cancelar agora. Tente novamente em instantes.');
+    } finally {
+      setActionLoadingId(null);
+    }
+  }
+
+  function openReschedule(appointment: ClienteAgendamento) {
+    const currentDate = new Date(appointment.data_hora_inicio);
+    const value = new Date(currentDate.getTime() - currentDate.getTimezoneOffset() * 60000)
+      .toISOString()
+      .slice(0, 16);
+
+    setRescheduleTarget(appointment);
+    setRescheduleValue(value);
+    setActionMessage(null);
+    setError(null);
+  }
+
+  async function handleRescheduleSubmit(event: FormEvent) {
+    event.preventDefault();
+    if (!rescheduleTarget || !rescheduleValue) return;
+
+    setActionLoadingId(rescheduleTarget.agendamento_id);
+    setActionMessage(null);
+    setError(null);
+
+    try {
+      const novoInicio = new Date(rescheduleValue);
+      const { data, error: rpcError } = await supabase.rpc('rpc_cliente_reagendar_agendamento', {
+        p_agendamento_id: rescheduleTarget.agendamento_id,
+        p_novo_inicio: novoInicio.toISOString(),
+      });
+
+      if (rpcError) throw rpcError;
+
+      const result = data as { success?: boolean; message?: string } | null;
+      if (result && result.success === false) {
+        setError(result.message || 'Nao foi possivel reagendar este horario.');
+        return;
+      }
+
+      setActionMessage('Agendamento reagendado com sucesso.');
+      setRescheduleTarget(null);
+      await loadAppointments();
+    } catch (err) {
+      console.error('[ClientePortal] Erro ao reagendar agendamento:', err);
+      const message = err instanceof Error ? err.message : '';
+      setError(
+        /ocupado|conflito|overlap/i.test(message)
+          ? 'Esse horario acabou de ser ocupado. Escolha outro horario.'
+          : 'Nao foi possivel reagendar agora. Tente novamente em instantes.'
+      );
+    } finally {
+      setActionLoadingId(null);
+    }
+  }
+
+  if (loading) {
     return (
-      <div className="flex min-h-screen items-center justify-center bg-[#050505] p-6 text-white">
-        <div className="max-w-sm rounded-3xl border border-white/10 bg-white/[0.04] p-8 text-center">
-          <AlertCircle className="mx-auto h-10 w-10 text-[#ff4d4d]" />
-          <h1 className="mt-4 text-xl font-black">Link da barbearia ausente</h1>
-          <p className="mt-2 text-sm leading-relaxed text-white/55">
-            Escolha uma barbearia na pagina inicial para acessar a area do cliente correta.
-          </p>
-          <Link href="/" className="mt-6 inline-flex h-12 items-center justify-center rounded-2xl bg-[#D6B47A] px-6 font-black text-black">
-            Ver barbearias
-          </Link>
-        </div>
+      <div className="flex min-h-[100dvh] items-center justify-center bg-[#050505] text-white">
+        <Loader2 className="h-8 w-8 animate-spin text-[#D6B47A]" />
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen overflow-x-hidden bg-[#050505] text-white">
+    <div className="min-h-[100dvh] overflow-x-hidden bg-[#050505] text-white">
       <div className="blob top-[-12%] left-[-20%]" />
       <div className="blob bottom-[10%] right-[-18%] bg-purple-500/10" style={{ animationDelay: '2s' }} />
 
@@ -325,8 +585,8 @@ function ClientePortalInner() {
         <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-5 sm:px-6">
           <div className="flex min-w-0 items-center gap-4">
             <Link
-              href={`/agendar?id=${barbeariaId}`}
-              aria-label="Voltar para agendamento"
+              href={appointmentHref}
+              aria-label={hasBarbeariaContext ? 'Voltar para agendamento' : 'Ver barbearias'}
               className="flex h-11 w-11 shrink-0 items-center justify-center rounded-xl border border-white/12 bg-white/[0.035] text-white/70 transition-all hover:bg-white/[0.07] hover:text-white"
             >
               <ArrowLeft className="h-5 w-5" />
@@ -335,8 +595,8 @@ function ClientePortalInner() {
               <Scissors className="h-6 w-6" />
             </div>
             <div className="min-w-0">
-              <h1 className="truncate text-lg font-black text-white sm:text-2xl">{barbeariaNome}</h1>
-              <p className="text-[10px] font-black uppercase tracking-[0.28em] text-white/55">Area do cliente</p>
+              <h1 className="break-words text-lg font-black leading-tight text-white sm:text-2xl">{barbeariaNome}</h1>
+              <p className="text-[10px] font-black uppercase leading-tight tracking-[0.14em] text-white/55">Area do cliente</p>
             </div>
           </div>
           <div className="flex items-center gap-3">
@@ -352,10 +612,10 @@ function ClientePortalInner() {
               </button>
             )}
             <Link
-              href={`/agendar?id=${barbeariaId}`}
+              href={appointmentHref}
               className="hidden rounded-xl border border-white/12 bg-white/[0.035] px-5 py-3 text-xs font-black uppercase tracking-[0.18em] text-white/70 transition-all hover:bg-white/[0.07] hover:text-white sm:block"
             >
-              Novo agendamento
+              {hasBarbeariaContext ? 'Novo agendamento' : 'Ver barbearias'}
             </Link>
           </div>
         </div>
@@ -370,28 +630,14 @@ function ClientePortalInner() {
             </h2>
             <p className="mt-3 text-sm leading-relaxed text-white/55">
               {accountEmail
-                ? 'Veja seus proximos horarios e o historico completo das barbearias onde voce agendou.'
-                : 'Entre com Google ou use a senha criada no seu primeiro agendamento.'}
+                ? hasBarbeariaContext
+                  ? 'Veja seus proximos horarios e o historico desta barbearia.'
+                  : 'Veja seus proximos horarios e o historico completo das barbearias onde voce agendou.'
+                : 'Entre com o e-mail e a senha criados no seu primeiro agendamento.'}
             </p>
 
             {!accountEmail ? (
               <div className="mt-7 space-y-5">
-                <button
-                  type="button"
-                  onClick={handleGoogleLogin}
-                  disabled={submitting}
-                  className="flex h-14 w-full items-center justify-center gap-3 rounded-2xl border border-white/15 bg-white/[0.03] font-black text-white transition-all hover:border-[#D6B47A]/35 hover:bg-white/[0.06] disabled:cursor-not-allowed disabled:opacity-60"
-                >
-                  <span className="flex h-8 w-8 items-center justify-center rounded-full bg-white text-base font-black text-black">G</span>
-                  Entrar com Google
-                </button>
-
-                <div className="flex items-center gap-3 text-xs font-black uppercase tracking-[0.18em] text-white/30">
-                  <span className="h-px flex-1 bg-white/10" />
-                  ou use e-mail e senha
-                  <span className="h-px flex-1 bg-white/10" />
-                </div>
-
               <form onSubmit={handleLogin} className="space-y-5">
                 <label className="block space-y-2">
                   <span className="text-[11px] font-black uppercase tracking-[0.2em] text-white/45">E-mail</span>
@@ -441,6 +687,41 @@ function ClientePortalInner() {
                   </div>
                 )}
 
+                {authNotice && (
+                  <div className="flex gap-3 rounded-2xl border border-[#D6B47A]/25 bg-[#D6B47A]/10 p-4 text-sm font-bold text-[#D6B47A]">
+                    <CheckCircle2 className="mt-0.5 h-4 w-4 shrink-0" />
+                    <p>{authNotice}</p>
+                  </div>
+                )}
+
+                {authHelpVisible && (
+                  <div className="space-y-3 rounded-2xl border border-white/10 bg-white/[0.035] p-4">
+                    <p className="text-sm leading-relaxed text-white/55">
+                      Se voce ja agendou mas nunca criou uma senha de cliente, crie o acesso com este e-mail. Se a conta ja existir, envie um link por e-mail.
+                    </p>
+                    <div className="grid gap-2 sm:grid-cols-2">
+                      <button
+                        type="button"
+                        onClick={createClientAccess}
+                        disabled={Boolean(authActionLoading)}
+                        className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-[#D6B47A]/25 bg-[#D6B47A]/10 px-3 text-sm font-black text-[#D6B47A] disabled:opacity-55"
+                      >
+                        {authActionLoading === 'create' && <Loader2 className="h-4 w-4 animate-spin" />}
+                        Criar acesso
+                      </button>
+                      <button
+                        type="button"
+                        onClick={sendAccessEmail}
+                        disabled={Boolean(authActionLoading)}
+                        className="flex min-h-12 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-3 text-sm font-black text-white/75 disabled:opacity-55"
+                      >
+                        {authActionLoading === 'email' && <Loader2 className="h-4 w-4 animate-spin" />}
+                        Enviar link
+                      </button>
+                    </div>
+                  </div>
+                )}
+
                 <button
                   type="submit"
                   disabled={submitting}
@@ -462,11 +743,16 @@ function ClientePortalInner() {
                     <p>{error}</p>
                     <button
                       type="button"
-                      onClick={loadAppointments}
+                      onClick={retryLoadAppointments}
                       className="font-black text-[#D6B47A] underline-offset-4 hover:underline"
                     >
                       Tentar carregar novamente
                     </button>
+                  </div>
+                )}
+                {actionMessage && (
+                  <div className="mt-4 rounded-2xl border border-[#D6B47A]/20 bg-[#D6B47A]/10 p-4 text-sm font-bold text-[#D6B47A]">
+                    {actionMessage}
                   </div>
                 )}
               </div>
@@ -474,11 +760,11 @@ function ClientePortalInner() {
           </div>
 
           <Link
-            href={`/agendar?id=${barbeariaId}`}
+            href={appointmentHref}
             className="flex min-h-16 items-center justify-center gap-3 rounded-2xl border border-white/10 bg-white/[0.035] px-5 font-black text-white transition-all hover:bg-white/[0.07] sm:hidden"
           >
             <CalendarDays className="h-5 w-5 text-[#D6B47A]" />
-            Fazer novo agendamento
+            {hasBarbeariaContext ? 'Fazer novo agendamento' : 'Ver barbearias'}
           </Link>
         </section>
 
@@ -491,7 +777,7 @@ function ClientePortalInner() {
               </div>
               {loaded && (
                 <div className="flex items-center gap-2 rounded-2xl border border-[#D6B47A]/20 bg-[#D6B47A]/10 px-4 py-3 text-sm font-black text-[#D6B47A]">
-                  <CheckCircle2 className="h-4 w-4" />
+                <CheckCircle2 className="h-4 w-4" />
                   {agendamentos.length} encontrados
                 </div>
               )}
@@ -530,7 +816,7 @@ function ClientePortalInner() {
               <Lock className="mx-auto h-12 w-12 text-white/25" />
               <h3 className="mt-5 text-xl font-black text-white">Login necessario</h3>
               <p className="mx-auto mt-3 max-w-md text-sm leading-relaxed text-white/45">
-                A conta e criada no agendamento novo. Depois disso, voce entra aqui com Google ou e-mail e senha.
+                A conta e criada no agendamento novo. Depois disso, voce entra aqui com e-mail e senha.
               </p>
             </div>
           )}
@@ -552,17 +838,101 @@ function ClientePortalInner() {
           {accountEmail && loaded && !loading && visibleAppointments.length > 0 && (
             <div className="space-y-4">
               {visibleAppointments.map(appointment => (
-                <AppointmentCard key={appointment.agendamento_id} appointment={appointment} />
+                <AppointmentCard
+                  key={appointment.agendamento_id}
+                  appointment={appointment}
+                  loading={actionLoadingId === appointment.agendamento_id}
+                  onCancel={handleCancelAppointment}
+                  onReschedule={openReschedule}
+                />
               ))}
+            </div>
+          )}
+
+          {accountEmail && loaded && waitlistEntries.length > 0 && (
+            <div className="rounded-3xl border border-white/10 bg-white/[0.035] p-5">
+              <h3 className="text-xl font-black text-white">Lista de espera</h3>
+              <div className="mt-4 grid gap-3">
+                {waitlistEntries.map(entry => (
+                  <div key={entry.id} className="rounded-2xl border border-white/10 bg-black/20 p-4">
+                    <p className="font-black text-white">{entry.data_preferida || 'Sem data definida'}</p>
+                    <p className="mt-1 text-sm text-white/50">{entry.periodo_preferido} | {entry.status}</p>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
         </section>
       </main>
+
+      {rescheduleTarget && (
+        <div className="fixed inset-0 z-50 flex items-end bg-black/70 p-4 backdrop-blur-sm sm:items-center sm:justify-center">
+          <form
+            onSubmit={handleRescheduleSubmit}
+            className="w-full max-w-md rounded-3xl border border-white/10 bg-[#101010] p-6 shadow-2xl shadow-black/50"
+          >
+            <div className="flex items-start justify-between gap-4">
+              <div>
+                <p className="text-[10px] font-black uppercase tracking-[0.25em] text-[#D6B47A]">Reagendar</p>
+                <h3 className="mt-2 text-2xl font-black text-white">Escolha novo horario</h3>
+                <p className="mt-2 text-sm text-white/50">A disponibilidade sera validada antes de salvar.</p>
+              </div>
+              <button
+                type="button"
+                onClick={() => setRescheduleTarget(null)}
+                className="flex h-10 w-10 items-center justify-center rounded-xl border border-white/10 bg-white/[0.04] text-white/55"
+                aria-label="Fechar"
+              >
+                <XCircle className="h-5 w-5" />
+              </button>
+            </div>
+
+            <label className="mt-6 block space-y-2">
+              <span className="text-[11px] font-black uppercase tracking-[0.2em] text-white/45">Nova data e horario</span>
+              <input
+                type="datetime-local"
+                required
+                value={rescheduleValue}
+                onChange={event => setRescheduleValue(event.target.value)}
+                className="h-14 w-full rounded-2xl border border-white/15 bg-white/[0.03] px-4 font-bold text-white outline-none transition-all focus:border-[#D6B47A]/60"
+              />
+            </label>
+
+            <div className="mt-6 grid gap-3 sm:grid-cols-2">
+              <button
+                type="button"
+                onClick={() => setRescheduleTarget(null)}
+                className="h-14 rounded-2xl border border-white/10 bg-white/[0.04] font-black text-white"
+              >
+                Voltar
+              </button>
+              <button
+                type="submit"
+                disabled={actionLoadingId === rescheduleTarget.agendamento_id}
+                className="flex h-14 items-center justify-center gap-2 rounded-2xl bg-[#D6B47A] font-black text-black disabled:opacity-60"
+              >
+                {actionLoadingId === rescheduleTarget.agendamento_id && <Loader2 className="h-4 w-4 animate-spin" />}
+                Confirmar
+              </button>
+            </div>
+          </form>
+        </div>
+      )}
     </div>
   );
 }
 
-function AppointmentCard({ appointment }: { appointment: ClienteAgendamento }) {
+function AppointmentCard({
+  appointment,
+  loading,
+  onCancel,
+  onReschedule,
+}: {
+  appointment: ClienteAgendamento;
+  loading: boolean;
+  onCancel: (appointment: ClienteAgendamento) => void;
+  onReschedule: (appointment: ClienteAgendamento) => void;
+}) {
   const { day, time } = formatDateTime(appointment.data_hora_inicio);
   const statusClass = statusStyle[appointment.status] || 'bg-white/8 text-white/60 border-white/10';
 
@@ -590,6 +960,41 @@ function AppointmentCard({ appointment }: { appointment: ClienteAgendamento }) {
           {appointment.observacoes}
         </div>
       )}
+
+      {(appointment.pode_cancelar || appointment.pode_reagendar || (appointment.avaliado === false && ['concluido', 'realizado', 'atendido'].includes(appointment.status))) && (
+        <div className="flex flex-col gap-3 border-t border-white/8 p-5 sm:flex-row sm:items-center sm:justify-end">
+          {appointment.avaliado === false && ['concluido', 'realizado', 'atendido'].includes(appointment.status) && (
+            <Link
+              href={`/avaliar?id=${appointment.barbearia_id}&agendamento=${appointment.agendamento_id}`}
+              className="flex h-11 items-center justify-center rounded-xl border border-[#D6B47A]/30 bg-[#D6B47A]/10 px-4 text-sm font-black text-[#D6B47A]"
+            >
+              Avaliar atendimento
+            </Link>
+          )}
+          {appointment.pode_reagendar && (
+            <button
+              type="button"
+              onClick={() => onReschedule(appointment)}
+              disabled={loading}
+              className="flex h-11 items-center justify-center gap-2 rounded-xl border border-white/10 bg-white/[0.04] px-4 text-sm font-black text-white transition-all hover:bg-white/[0.08] disabled:opacity-60"
+            >
+              {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+              Reagendar
+            </button>
+          )}
+          {appointment.pode_cancelar && (
+            <button
+              type="button"
+              onClick={() => onCancel(appointment)}
+              disabled={loading}
+              className="flex h-11 items-center justify-center gap-2 rounded-xl border border-[#ff4d4d]/25 bg-[#ff4d4d]/10 px-4 text-sm font-black text-[#ff8a8a] transition-all hover:bg-[#ff4d4d]/15 disabled:opacity-60"
+            >
+              {loading && <Loader2 className="h-4 w-4 animate-spin" />}
+              Cancelar
+            </button>
+          )}
+        </div>
+      )}
     </article>
   );
 }
@@ -610,7 +1015,7 @@ function InfoBlock({
       <Icon className="mt-1 h-5 w-5 shrink-0 text-white/35" />
       <div className="min-w-0">
         <p className="text-[10px] font-black uppercase tracking-[0.2em] text-white/35">{label}</p>
-        <p className={`mt-1 truncate font-black ${highlight ? 'text-[#D6B47A]' : 'text-white'}`}>{value}</p>
+        <p className={`mt-1 break-words font-black ${highlight ? 'text-[#D6B47A]' : 'text-white'}`}>{value}</p>
       </div>
     </div>
   );
@@ -619,7 +1024,7 @@ function InfoBlock({
 export default function ClientePortalPage() {
   return (
     <Suspense fallback={
-      <div className="flex min-h-screen items-center justify-center bg-[#050505] text-white">
+      <div className="flex min-h-[100dvh] items-center justify-center bg-[#050505] text-white">
         <Loader2 className="h-8 w-8 animate-spin text-[#D6B47A]" />
       </div>
     }>

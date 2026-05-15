@@ -21,7 +21,9 @@ import {
 } from '@/lib/reportUtils';
 import { DateFilterModal } from '@/components/relatorios/DateFilterModal';
 
-export type RelatoriosContextType = ReturnType<typeof useDateFilter> & ReturnType<typeof useRelatorios>;
+export type RelatoriosContextType = ReturnType<typeof useDateFilter> & ReturnType<typeof useRelatorios> & {
+  barbeariaId?: string;
+};
 
 const RelatoriosContext = createContext<RelatoriosContextType | null>(null);
 
@@ -69,7 +71,7 @@ function RelatoriosContent({ children }: { children: React.ReactNode }) {
     fimMes: dateFilter.endDate,
   });
 
-  const providerValue = { ...dateFilter, ...relatorios };
+  const providerValue = { ...dateFilter, ...relatorios, barbeariaId };
   const pdfConfig = useMemo(
     () => buildPdfConfig(pathname, providerValue, dateFilter.formattedLabel),
     [pathname, providerValue, dateFilter.formattedLabel]
@@ -87,19 +89,19 @@ function RelatoriosContent({ children }: { children: React.ReactNode }) {
 
   return (
     <RelatoriosContext.Provider value={providerValue}>
-      <div className="space-y-7 pb-10 animate-in fade-in duration-500">
-        <header className="flex flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
-          <div>
-            <h2 className="text-3xl font-black uppercase tracking-tight text-white sm:text-4xl">
+      <div className="max-w-full space-y-7 overflow-hidden pb-10 animate-in fade-in duration-500">
+        <header className="flex min-w-0 flex-col gap-5 lg:flex-row lg:items-start lg:justify-between">
+          <div className="min-w-0">
+            <h2 className="break-words text-2xl font-black uppercase tracking-tight text-white sm:text-4xl">
               Estatisticas e relatorios
             </h2>
             <p className="mt-2 text-base text-white/50">Acompanhe o desempenho da sua barbearia</p>
           </div>
 
-          <div className="flex flex-col gap-3 sm:flex-row">
+          <div className="flex min-w-0 flex-col gap-3 sm:flex-row">
             <button
               onClick={() => setIsModalOpen(true)}
-              className="flex h-12 items-center justify-center gap-3 rounded-xl border border-white/10 bg-white/[0.035] px-5 font-black uppercase tracking-[0.12em] text-white transition-all hover:bg-white/[0.07]"
+              className="flex h-12 min-w-0 items-center justify-center gap-3 rounded-xl border border-white/10 bg-white/[0.035] px-4 text-sm font-black uppercase tracking-[0.08em] text-white transition-all hover:bg-white/[0.07] sm:px-5 sm:tracking-[0.12em]"
             >
               <Calendar className="h-4 w-4 text-white/60" />
               {dateFilter.formattedLabel}
@@ -110,7 +112,7 @@ function RelatoriosContent({ children }: { children: React.ReactNode }) {
               onClick={handleDownloadPDF}
               disabled={!pdfConfig || pdfConfig.data.length === 0 || isExporting}
               title={!pdfConfig || pdfConfig.data.length === 0 ? 'Sem dados para exportar neste periodo' : 'Baixar relatorio em PDF'}
-              className="flex h-12 items-center justify-center gap-3 rounded-xl border border-white/10 bg-white/[0.035] px-5 font-black uppercase tracking-[0.12em] text-white transition-all hover:bg-white/[0.07] disabled:cursor-not-allowed disabled:opacity-35"
+              className="flex h-12 min-w-0 items-center justify-center gap-3 rounded-xl border border-white/10 bg-white/[0.035] px-4 text-sm font-black uppercase tracking-[0.08em] text-white transition-all hover:bg-white/[0.07] disabled:cursor-not-allowed disabled:opacity-35 sm:px-5 sm:tracking-[0.12em]"
             >
               <Download className="h-4 w-4 text-white/60" />
               {isExporting ? 'Gerando...' : 'Baixar PDF'}
@@ -118,7 +120,7 @@ function RelatoriosContent({ children }: { children: React.ReactNode }) {
           </div>
         </header>
 
-        <nav className="flex gap-8 overflow-x-auto border-b border-white/10 no-scrollbar">
+        <nav className="flex max-w-full gap-5 overflow-x-auto border-b border-white/10 no-scrollbar sm:gap-8">
           {TABS.map(tab => {
             const isActive = pathname === tab.href || pathname.startsWith(`${tab.href}/`);
             return (

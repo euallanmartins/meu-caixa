@@ -87,7 +87,7 @@ export default function BarChartGrouped({
   };
 
   return (
-    <div style={{ height: `${height}px` }}>
+    <div className="w-full max-w-full overflow-hidden" style={{ height: `${Math.max(170, height)}px` }}>
       <Bar data={chartData} options={options} />
     </div>
   );

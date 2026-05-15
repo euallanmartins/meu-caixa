@@ -106,7 +106,7 @@ export default function GorjetasPage() {
             <option value="pix">Pix</option>
           </select>
         </label>
-        <button onClick={handleSubmit} className="flex h-12 items-center justify-center gap-2 rounded-xl bg-[#00d875] px-5 font-black text-black">
+        <button onClick={handleSubmit} className="flex h-12 items-center justify-center gap-2 rounded-xl bg-[#D6B47A] px-5 font-black text-black">
           <Plus className="h-4 w-4" />
           Lancar
         </button>

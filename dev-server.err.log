@@ -1,0 +1,388 @@
+⚠ Found a change in next.config.ts. Restarting the server to apply the changes...
+[browser] [ClientePortal] Erro ao carregar agenda: {
+  code: [32m'42702'[39m,
+  details: [32m'It could refer to either a PL/pgSQL variable or a table column.'[39m,
+  hint: [1mnull[22m,
+  message: [32m'column reference "barbearia_id" is ambiguous'[39m
+} 
+    at bootstrap (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_0.kk_tf._.js:208:29) (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_0.kk_tf._.js:208:29)
+[browser] [ClientePortal] Erro ao carregar agenda: {
+  code: [32m'42702'[39m,
+  details: [32m'It could refer to either a PL/pgSQL variable or a table column.'[39m,
+  hint: [1mnull[22m,
+  message: [32m'column reference "barbearia_id" is ambiguous'[39m
+} 
+    at bootstrap (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_0.kk_tf._.js:208:29) (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_0.kk_tf._.js:208:29)
+[browser] Erro ao carregar agendamentos: {
+  code: [32m'42703'[39m,
+  details: [1mnull[22m,
+  hint: [1mnull[22m,
+  message: [32m'column barbeiros_1.foto_url does not exist'[39m
+} 
+    at loadData (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_components_ScheduleView_tsx_0gab-sq._.js:231:38) (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_components_ScheduleView_tsx_0gab-sq._.js:231:38)
+[browser] Erro ao carregar agendamentos: {
+  code: [32m'42703'[39m,
+  details: [1mnull[22m,
+  hint: [1mnull[22m,
+  message: [32m'column barbeiros_1.foto_url does not exist'[39m
+} 
+    at loadData (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_components_ScheduleView_tsx_0gab-sq._.js:231:38) (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_components_ScheduleView_tsx_0gab-sq._.js:231:38)
+[browser] Erro ao carregar agendamentos: {
+  code: [32m'42703'[39m,
+  details: [1mnull[22m,
+  hint: [1mnull[22m,
+  message: [32m'column barbeiros_1.foto_url does not exist'[39m
+} 
+    at loadData (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_components_ScheduleView_tsx_0gab-sq._.js:231:38) (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_components_ScheduleView_tsx_0gab-sq._.js:231:38)
+[browser] Erro ao carregar agendamentos: {
+  code: [32m'42703'[39m,
+  details: [1mnull[22m,
+  hint: [1mnull[22m,
+  message: [32m'column barbeiros_1.foto_url does not exist'[39m
+} 
+    at loadData (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_components_ScheduleView_tsx_0gab-sq._.js:231:38) (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_components_ScheduleView_tsx_0gab-sq._.js:231:38)
+[browser] Error fetching clients: {
+  code: [32m'42703'[39m,
+  details: [1mnull[22m,
+  hint: [1mnull[22m,
+  message: [32m'column barbeiros_2.foto_url does not exist'[39m
+} 
+    at fetchClientes (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_0xkz.vq._.js:1502:21) (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_0xkz.vq._.js:1502:21)
+[browser] Error fetching clients: {
+  code: [32m'42703'[39m,
+  details: [1mnull[22m,
+  hint: [1mnull[22m,
+  message: [32m'column barbeiros_2.foto_url does not exist'[39m
+} 
+    at fetchClientes (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_0xkz.vq._.js:1502:21) (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_0xkz.vq._.js:1502:21)
+[browser] Erro ao carregar agendamentos: {
+  code: [32m'42703'[39m,
+  details: [1mnull[22m,
+  hint: [1mnull[22m,
+  message: [32m'column barbeiros_1.foto_url does not exist'[39m
+} 
+    at loadData (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_components_ScheduleView_tsx_0gab-sq._.js:231:38) (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_components_ScheduleView_tsx_0gab-sq._.js:231:38)
+[browser] Erro ao carregar agendamentos: {
+  code: [32m'42703'[39m,
+  details: [1mnull[22m,
+  hint: [1mnull[22m,
+  message: [32m'column barbeiros_1.foto_url does not exist'[39m
+} 
+    at loadData (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_components_ScheduleView_tsx_0gab-sq._.js:231:38) (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_components_ScheduleView_tsx_0gab-sq._.js:231:38)
+[browser] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width. (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/node_modules_next_dist_115brz8._.js:2431:13)
+[browser] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width. (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/node_modules_next_dist_115brz8._.js:2431:13)
+[browser] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width. (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/node_modules_next_dist_115brz8._.js:2431:13)
+[browser] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width. (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/node_modules_next_dist_115brz8._.js:2431:13)
+[browser] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width. (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/node_modules_next_dist_115brz8._.js:2431:13)
+[browser] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width. (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/node_modules_next_dist_115brz8._.js:2431:13)
+[browser] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width. (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/node_modules_next_dist_115brz8._.js:2431:13)
+[browser] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width. (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/node_modules_next_dist_115brz8._.js:2431:13)
+[browser] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width. (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/node_modules_next_dist_115brz8._.js:2431:13)
+[browser] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width. (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/node_modules_next_dist_115brz8._.js:2431:13)
+[browser] Erro ao carregar agendamentos: {
+  code: [32m'42703'[39m,
+  details: [1mnull[22m,
+  hint: [1mnull[22m,
+  message: [32m'column barbeiros_1.foto_url does not exist'[39m
+} 
+    at loadData (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_components_ScheduleView_tsx_0gab-sq._.js:231:38) (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_components_ScheduleView_tsx_0gab-sq._.js:231:38)
+[browser] Erro ao carregar agendamentos: {
+  code: [32m'42703'[39m,
+  details: [1mnull[22m,
+  hint: [1mnull[22m,
+  message: [32m'column barbeiros_1.foto_url does not exist'[39m
+} 
+    at loadData (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_components_ScheduleView_tsx_0gab-sq._.js:231:38) (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_components_ScheduleView_tsx_0gab-sq._.js:231:38)
+[browser] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width. (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/node_modules_next_dist_115brz8._.js:2431:13)
+[browser] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width. (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/node_modules_next_dist_115brz8._.js:2431:13)
+[browser] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width. (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/node_modules_next_dist_115brz8._.js:2431:13)
+[browser] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width. (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/node_modules_next_dist_115brz8._.js:2431:13)
+[browser] Error fetching clients: {
+  code: [32m'42703'[39m,
+  details: [1mnull[22m,
+  hint: [1mnull[22m,
+  message: [32m'column barbeiros_2.foto_url does not exist'[39m
+} 
+    at fetchClientes (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_0xkz.vq._.js:1502:21) (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_0xkz.vq._.js:1502:21)
+[browser] Error fetching clients: {
+  code: [32m'42703'[39m,
+  details: [1mnull[22m,
+  hint: [1mnull[22m,
+  message: [32m'column barbeiros_2.foto_url does not exist'[39m
+} 
+    at fetchClientes (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_0xkz.vq._.js:1502:21) (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_0xkz.vq._.js:1502:21)
+[browser] Erro ao carregar agendamentos: {
+  code: [32m'42703'[39m,
+  details: [1mnull[22m,
+  hint: [1mnull[22m,
+  message: [32m'column barbeiros_1.foto_url does not exist'[39m
+} 
+    at loadData (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_components_ScheduleView_tsx_0gab-sq._.js:231:38) (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_components_ScheduleView_tsx_0gab-sq._.js:231:38)
+[browser] Erro ao carregar agendamentos: {
+  code: [32m'42703'[39m,
+  details: [1mnull[22m,
+  hint: [1mnull[22m,
+  message: [32m'column barbeiros_1.foto_url does not exist'[39m
+} 
+    at loadData (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_components_ScheduleView_tsx_0gab-sq._.js:231:38) (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_components_ScheduleView_tsx_0gab-sq._.js:231:38)
+[browser] Error fetching clients: {
+  code: [32m'42703'[39m,
+  details: [1mnull[22m,
+  hint: [1mnull[22m,
+  message: [32m'column barbeiros_2.foto_url does not exist'[39m
+} 
+    at fetchClientes (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_0xkz.vq._.js:1502:21) (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_0xkz.vq._.js:1502:21)
+[browser] Error fetching clients: {
+  code: [32m'42703'[39m,
+  details: [1mnull[22m,
+  hint: [1mnull[22m,
+  message: [32m'column barbeiros_2.foto_url does not exist'[39m
+} 
+    at fetchClientes (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_0xkz.vq._.js:1502:21) (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_0xkz.vq._.js:1502:21)
+[browser] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width. (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/node_modules_next_dist_115brz8._.js:2431:13)
+[browser] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width. (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/node_modules_next_dist_115brz8._.js:2431:13)
+[browser] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width. (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/node_modules_next_dist_115brz8._.js:2431:13)
+[browser] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width. (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/node_modules_next_dist_115brz8._.js:2431:13)
+[browser] Erro ao carregar agendamentos: {
+  code: [32m'42703'[39m,
+  details: [1mnull[22m,
+  hint: [1mnull[22m,
+  message: [32m'column barbeiros_1.foto_url does not exist'[39m
+} 
+    at loadData (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_components_ScheduleView_tsx_0gab-sq._.js:231:38) (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_components_ScheduleView_tsx_0gab-sq._.js:231:38)
+[browser] Erro ao carregar agendamentos: {
+  code: [32m'42703'[39m,
+  details: [1mnull[22m,
+  hint: [1mnull[22m,
+  message: [32m'column barbeiros_1.foto_url does not exist'[39m
+} 
+    at loadData (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_components_ScheduleView_tsx_0gab-sq._.js:231:38) (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_components_ScheduleView_tsx_0gab-sq._.js:231:38)
+[browser] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width. (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/node_modules_next_dist_115brz8._.js:2431:13)
+[browser] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width. (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/node_modules_next_dist_115brz8._.js:2431:13)
+[browser] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width. (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/node_modules_next_dist_115brz8._.js:2431:13)
+[browser] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width. (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/node_modules_next_dist_115brz8._.js:2431:13)
+[browser] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width. (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/node_modules_next_dist_115brz8._.js:2431:13)
+[browser] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width. (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/node_modules_next_dist_115brz8._.js:2431:13)
+[browser] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width. (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/node_modules_next_dist_115brz8._.js:2431:13)
+[browser] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width. (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/node_modules_next_dist_115brz8._.js:2431:13)
+[browser] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width. (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/node_modules_next_dist_115brz8._.js:2431:13)
+[browser] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width. (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/node_modules_next_dist_115brz8._.js:2431:13)
+[browser] Erro ao carregar agendamentos: {
+  code: [32m'42703'[39m,
+  details: [1mnull[22m,
+  hint: [1mnull[22m,
+  message: [32m'column barbeiros_1.foto_url does not exist'[39m
+} 
+    at loadData (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_components_ScheduleView_tsx_0gab-sq._.js:231:38) (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_components_ScheduleView_tsx_0gab-sq._.js:231:38)
+[browser] Erro ao carregar agendamentos: {
+  code: [32m'42703'[39m,
+  details: [1mnull[22m,
+  hint: [1mnull[22m,
+  message: [32m'column barbeiros_1.foto_url does not exist'[39m
+} 
+    at loadData (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_components_ScheduleView_tsx_0gab-sq._.js:231:38) (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_components_ScheduleView_tsx_0gab-sq._.js:231:38)
+[browser] Error fetching clients: {
+  code: [32m'42703'[39m,
+  details: [1mnull[22m,
+  hint: [1mnull[22m,
+  message: [32m'column barbeiros_2.foto_url does not exist'[39m
+} 
+    at fetchClientes (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_0xkz.vq._.js:1502:21) (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_0xkz.vq._.js:1502:21)
+[browser] Error fetching clients: {
+  code: [32m'42703'[39m,
+  details: [1mnull[22m,
+  hint: [1mnull[22m,
+  message: [32m'column barbeiros_2.foto_url does not exist'[39m
+} 
+    at fetchClientes (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_0xkz.vq._.js:1502:21) (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_0xkz.vq._.js:1502:21)
+[browser] Erro ao carregar agendamentos: {
+  code: [32m'42703'[39m,
+  details: [1mnull[22m,
+  hint: [1mnull[22m,
+  message: [32m'column barbeiros_1.foto_url does not exist'[39m
+} 
+    at loadData (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_components_ScheduleView_tsx_0gab-sq._.js:231:38) (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_components_ScheduleView_tsx_0gab-sq._.js:231:38)
+[browser] Erro ao carregar agendamentos: {
+  code: [32m'42703'[39m,
+  details: [1mnull[22m,
+  hint: [1mnull[22m,
+  message: [32m'column barbeiros_1.foto_url does not exist'[39m
+} 
+    at loadData (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_components_ScheduleView_tsx_0gab-sq._.js:231:38) (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_components_ScheduleView_tsx_0gab-sq._.js:231:38)
+[browser] [ClientePortal] Erro ao carregar agenda: {
+  code: [32m'42702'[39m,
+  details: [32m'It could refer to either a PL/pgSQL variable or a table column.'[39m,
+  hint: [1mnull[22m,
+  message: [32m'column reference "barbearia_id" is ambiguous'[39m
+} 
+    at bootstrap (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_0.kk_tf._.js:208:29) (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_0.kk_tf._.js:208:29)
+[browser] Erro ao carregar agendamentos: {
+  code: [32m'42703'[39m,
+  details: [1mnull[22m,
+  hint: [1mnull[22m,
+  message: [32m'column barbeiros_1.foto_url does not exist'[39m
+} 
+    at loadData (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_components_ScheduleView_tsx_0gab-sq._.js:231:38) (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_components_ScheduleView_tsx_0gab-sq._.js:231:38)
+[browser] Erro ao carregar agendamentos: {
+  code: [32m'42703'[39m,
+  details: [1mnull[22m,
+  hint: [1mnull[22m,
+  message: [32m'column barbeiros_1.foto_url does not exist'[39m
+} 
+    at loadData (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_components_ScheduleView_tsx_0gab-sq._.js:231:38) (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_components_ScheduleView_tsx_0gab-sq._.js:231:38)
+[browser] Erro ao carregar agendamentos: {
+  code: [32m'42703'[39m,
+  details: [1mnull[22m,
+  hint: [1mnull[22m,
+  message: [32m'column barbeiros_1.foto_url does not exist'[39m
+} 
+    at loadData (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_components_ScheduleView_tsx_0gab-sq._.js:231:38) (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_components_ScheduleView_tsx_0gab-sq._.js:231:38)
+[browser] [AIDA] Falha ao processar lancamento: {
+  code: [32m'42703'[39m,
+  details: [1mnull[22m,
+  hint: [32m'Perhaps you meant to reference the column "s.categoria_id".'[39m,
+  message: [32m'column s.categoria does not exist'[39m
+} 
+    at handleProcess (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/_0lm0klq._.js:73:21) (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/_0lm0klq._.js:73:21)
+[browser] Erro ao carregar agendamentos: {
+  code: [32m'42703'[39m,
+  details: [1mnull[22m,
+  hint: [1mnull[22m,
+  message: [32m'column barbeiros_1.foto_url does not exist'[39m
+} 
+    at loadData (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_components_ScheduleView_tsx_0gab-sq._.js:231:38) (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_components_ScheduleView_tsx_0gab-sq._.js:231:38)
+[browser] Erro ao carregar agendamentos: {
+  code: [32m'42703'[39m,
+  details: [1mnull[22m,
+  hint: [1mnull[22m,
+  message: [32m'column barbeiros_1.foto_url does not exist'[39m
+} 
+    at loadData (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_components_ScheduleView_tsx_0gab-sq._.js:231:38) (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_components_ScheduleView_tsx_0gab-sq._.js:231:38)
+[browser] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width. (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/node_modules_next_dist_115brz8._.js:2431:13)
+[browser] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width. (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/node_modules_next_dist_115brz8._.js:2431:13)
+[browser] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width. (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/node_modules_next_dist_115brz8._.js:2431:13)
+[browser] The width(-1) and height(-1) of chart should be greater than 0,
+       please check the style of container, or the props width(100%) and height(100%),
+       or add a minWidth(0) or minHeight(undefined) or use aspect(undefined) to control the
+       height and width. (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/node_modules_next_dist_115brz8._.js:2431:13)
+[browser] Error fetching clients: {
+  code: [32m'42703'[39m,
+  details: [1mnull[22m,
+  hint: [1mnull[22m,
+  message: [32m'column barbeiros_2.foto_url does not exist'[39m
+} 
+    at fetchClientes (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_0xkz.vq._.js:1502:21) (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_0xkz.vq._.js:1502:21)
+[browser] Error fetching clients: {
+  code: [32m'42703'[39m,
+  details: [1mnull[22m,
+  hint: [1mnull[22m,
+  message: [32m'column barbeiros_2.foto_url does not exist'[39m
+} 
+    at fetchClientes (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_0xkz.vq._.js:1502:21) (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_0xkz.vq._.js:1502:21)
+[browser] Erro ao carregar agendamentos: {
+  code: [32m'42703'[39m,
+  details: [1mnull[22m,
+  hint: [1mnull[22m,
+  message: [32m'column barbeiros_1.foto_url does not exist'[39m
+} 
+    at loadData (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_components_ScheduleView_tsx_0gab-sq._.js:231:38) (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_components_ScheduleView_tsx_0gab-sq._.js:231:38)
+[browser] Erro ao carregar agendamentos: {
+  code: [32m'42703'[39m,
+  details: [1mnull[22m,
+  hint: [1mnull[22m,
+  message: [32m'column barbeiros_1.foto_url does not exist'[39m
+} 
+    at loadData (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_components_ScheduleView_tsx_0gab-sq._.js:231:38) (file://C:/Users/Administrator/Desktop/meu caixa/.next/dev/static/chunks/src_components_ScheduleView_tsx_0gab-sq._.js:231:38)

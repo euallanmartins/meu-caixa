@@ -3,6 +3,8 @@ export const DEFAULT_PUBLIC_BARBEARIA = {
   nome: 'dsbarbershop',
   slug: 'dsbarbershop',
   cidade: 'Agendamento online',
+  ativo: true,
+  status: 'active',
 };
 
 export const publicBarbearias = [DEFAULT_PUBLIC_BARBEARIA];

@@ -96,7 +96,7 @@ const startOfLocalMonth = (date = new Date()) =>
 const startOfNextLocalMonth = (date = new Date()) =>
   new Date(date.getFullYear(), date.getMonth() + 1, 1);
 
-export function useDashboardData(barbeariaId: string | null) {
+export function useDashboardData(barbeariaId: string | null, scopeBarbeiroId?: string | null) {
   const [transactions, setTransactions] = useState<DashboardTransaction[]>([]);
   const [barbers, setBarbers] = useState<DashboardBarber[]>([]);
   const [currentSession, setCurrentSession] = useState<CaixaSession | null>(null);
@@ -120,6 +120,93 @@ export function useDashboardData(barbeariaId: string | null) {
       const dayEndISO = startOfNextLocalDay(now).toISOString();
       const monthStartISO = startOfLocalMonth(now).toISOString();
       const monthEndISO = startOfNextLocalMonth(now).toISOString();
+      const scope = scopeBarbeiroId || null;
+
+      let barbersQuery = supabase
+        .from('barbeiros')
+        .select('*')
+        .eq('barbearia_id', barbeariaId)
+        .eq('ativo', true)
+        .order('nome');
+
+      let transacoesQuery = supabase
+        .from('transacoes')
+        .select(`
+          id,
+          valor_total,
+          data,
+          cliente_nome,
+          barbeiro_id,
+          servicos ( nome ),
+          barbeiros ( nome, comissao, comissao_tipo ),
+          transacao_pagamentos ( metodo, valor ),
+          venda_produtos ( quantidade, produtos ( nome ) )
+        `)
+        .eq('barbearia_id', barbeariaId)
+        .gte('data', dayStartISO)
+        .lt('data', dayEndISO)
+        .order('data', { ascending: false });
+
+      let caixinhasQuery = supabase
+        .from('caixinhas')
+        .select('id, valor, metodo, data, barbeiro_id, barbeiros(nome)')
+        .eq('barbearia_id', barbeariaId)
+        .gte('data', dayStartISO)
+        .lt('data', dayEndISO);
+
+      let vendasProdutosQuery = supabase
+        .from('venda_produtos')
+        .select('id, transacao_id, valor_total, created_at, produto_id, comissao_total, barbeiro_id, produtos(nome), barbeiros(nome)')
+        .eq('barbearia_id', barbeariaId)
+        .is('transacao_id', null)
+        .gte('created_at', dayStartISO)
+        .lt('created_at', dayEndISO);
+
+      let todayAppointmentsQuery = supabase
+        .from('agendamentos')
+        .select(`
+          id, status, data_hora_inicio, data_hora_fim, valor_estimado, barbeiro_id,
+          clientes(nome),
+          servicos(nome, valor),
+          barbeiros(nome)
+        `)
+        .eq('barbearia_id', barbeariaId)
+        .gte('data_hora_inicio', dayStartISO)
+        .lt('data_hora_inicio', dayEndISO)
+        .order('data_hora_inicio', { ascending: true });
+
+      let monthAppointmentsQuery = supabase
+        .from('agendamentos')
+        .select('id, status, data_hora_inicio, valor_estimado, barbeiro_id, servicos(valor)')
+        .eq('barbearia_id', barbeariaId)
+        .gte('data_hora_inicio', monthStartISO)
+        .lt('data_hora_inicio', monthEndISO);
+
+      let monthTransactionsQuery = supabase
+        .from('transacoes')
+        .select('id, valor_total, barbeiro_id, data')
+        .eq('barbearia_id', barbeariaId)
+        .gte('data', monthStartISO)
+        .lt('data', monthEndISO);
+
+      let standaloneProductMonthQuery = supabase
+        .from('venda_produtos')
+        .select('id, transacao_id, valor_total, barbeiro_id, created_at')
+        .eq('barbearia_id', barbeariaId)
+        .is('transacao_id', null)
+        .gte('created_at', monthStartISO)
+        .lt('created_at', monthEndISO);
+
+      if (scope) {
+        barbersQuery = barbersQuery.eq('id', scope);
+        transacoesQuery = transacoesQuery.eq('barbeiro_id', scope);
+        caixinhasQuery = caixinhasQuery.eq('barbeiro_id', scope);
+        vendasProdutosQuery = vendasProdutosQuery.eq('barbeiro_id', scope);
+        todayAppointmentsQuery = todayAppointmentsQuery.eq('barbeiro_id', scope);
+        monthAppointmentsQuery = monthAppointmentsQuery.eq('barbeiro_id', scope);
+        monthTransactionsQuery = monthTransactionsQuery.eq('barbeiro_id', scope);
+        standaloneProductMonthQuery = standaloneProductMonthQuery.eq('barbeiro_id', scope);
+      }
 
       const [
         barbersRes,
@@ -132,79 +219,22 @@ export function useDashboardData(barbeariaId: string | null) {
         monthTransactionsRes,
         standaloneProductMonthRes,
       ] = await Promise.all([
-        supabase
-          .from('barbeiros')
-          .select('*')
-          .eq('barbearia_id', barbeariaId)
-          .eq('ativo', true)
-          .order('nome'),
-        supabase
-          .from('transacoes')
-          .select(`
-            id,
-            valor_total,
-            data,
-            cliente_nome,
-            barbeiro_id,
-            servicos ( nome ),
-            barbeiros ( nome, comissao, comissao_tipo ),
-            transacao_pagamentos ( metodo, valor ),
-            venda_produtos ( quantidade, produtos ( nome ) )
-          `)
-          .eq('barbearia_id', barbeariaId)
-          .gte('data', dayStartISO)
-          .lt('data', dayEndISO)
-          .order('data', { ascending: false }),
-        supabase
-          .from('despesas')
-          .select('id, descricao, valor, data')
-          .eq('barbearia_id', barbeariaId)
-          .gte('data', dayStartISO)
-          .lt('data', dayEndISO),
-        supabase
-          .from('caixinhas')
-          .select('id, valor, metodo, data, barbeiro_id, barbeiros(nome)')
-          .eq('barbearia_id', barbeariaId)
-          .gte('data', dayStartISO)
-          .lt('data', dayEndISO),
-        supabase
-          .from('venda_produtos')
-          .select('id, transacao_id, valor_total, created_at, produto_id, comissao_total, barbeiro_id, produtos(nome), barbeiros(nome)')
-          .eq('barbearia_id', barbeariaId)
-          .is('transacao_id', null)
-          .gte('created_at', dayStartISO)
-          .lt('created_at', dayEndISO),
-        supabase
-          .from('agendamentos')
-          .select(`
-            id, status, data_hora_inicio, data_hora_fim, valor_estimado, barbeiro_id,
-            clientes(nome),
-            servicos(nome, valor),
-            barbeiros(nome)
-          `)
-          .eq('barbearia_id', barbeariaId)
-          .gte('data_hora_inicio', dayStartISO)
-          .lt('data_hora_inicio', dayEndISO)
-          .order('data_hora_inicio', { ascending: true }),
-        supabase
-          .from('agendamentos')
-          .select('id, status, data_hora_inicio, valor_estimado, barbeiro_id, servicos(valor)')
-          .eq('barbearia_id', barbeariaId)
-          .gte('data_hora_inicio', monthStartISO)
-          .lt('data_hora_inicio', monthEndISO),
-        supabase
-          .from('transacoes')
-          .select('id, valor_total, barbeiro_id, data')
-          .eq('barbearia_id', barbeariaId)
-          .gte('data', monthStartISO)
-          .lt('data', monthEndISO),
-        supabase
-          .from('venda_produtos')
-          .select('id, transacao_id, valor_total, barbeiro_id, created_at')
-          .eq('barbearia_id', barbeariaId)
-          .is('transacao_id', null)
-          .gte('created_at', monthStartISO)
-          .lt('created_at', monthEndISO),
+        barbersQuery,
+        transacoesQuery,
+        scope
+          ? Promise.resolve({ data: [], error: null })
+          : supabase
+            .from('despesas')
+            .select('id, descricao, valor, data')
+            .eq('barbearia_id', barbeariaId)
+            .gte('data', dayStartISO)
+            .lt('data', dayEndISO),
+        caixinhasQuery,
+        vendasProdutosQuery,
+        todayAppointmentsQuery,
+        monthAppointmentsQuery,
+        monthTransactionsQuery,
+        standaloneProductMonthQuery,
       ]);
 
       if (barbersRes.error) throw barbersRes.error;
@@ -372,7 +402,7 @@ export function useDashboardData(barbeariaId: string | null) {
   useEffect(() => {
     fetchTransactions();
     fetchActiveSession();
-  }, [barbeariaId]);
+  }, [barbeariaId, scopeBarbeiroId]);
 
   return {
     transactions,
