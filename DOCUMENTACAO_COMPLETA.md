@@ -447,7 +447,7 @@ O alias `@/*` aponta para `./src/*`.
 - Centralizar acesso Supabase em `src/lib/supabase*`.
 - Preservar isolamento por `barbearia_id`.
 - Preferir RPC para operacoes publicas ou atomicas.
-- Antes de mudar APIs do Next, consultar `node_modules/next/dist/docs/`, conforme `AGENTS.md`.
+- Antes de mudar APIs do Next, consultar `node_modules/next/dist/docs/`.
 
 ## Como rodar localmente
 

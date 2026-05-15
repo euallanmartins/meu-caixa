@@ -5,7 +5,7 @@
 ![TypeScript](https://img.shields.io/badge/typescript-%23007ACC.svg?style=for-the-badge&logo=typescript&logoColor=white)
 ![Lucide](https://img.shields.io/badge/Lucide_React-%2361DAFB.svg?style=for-the-badge&logo=react&logoColor=white)
 
-> Sistema de gestão financeira de alta fidelidade para barbearias, com inteligência artificial integrada e design **Liquid Glass**.
+> Sistema de gestão financeira de alta fidelidade para barbearias com design **Liquid Glass**.
 
 ---
 
@@ -14,7 +14,7 @@
 ### 🧴 Design Liquid Glass
 Interface ultra-moderna com efeitos de vidro fosco, reflexos dinâmicos e fundos animados (blobs) que proporcionam uma experiência visual premium.
 
-### 🤖 Assistente AIDA (IA)
+### 🤖 Assistente Virtual (AIDA)
 Processamento inteligente de linguagem natural. Digite *"Corte R$ 35 no pix"* ou *"Comprei materiais R$ 50"* e a AIDA cuida de lançar tudo no seu fluxo de caixa automaticamente.
 
 ### 📱 Responsividade Total
@@ -30,7 +30,7 @@ Layout otimizado para tablets e smartphones, com navegação fluida e grid adapt
 
 ## 🛠️ Tecnologias
 
-- **Framework**: [Next.js 15 (App Router)](https://nextjs.org/)
+- **Framework**: [Next.js 16.2.3 (App Router)](https://nextjs.org/)
 - **Banco de Dados & Auth**: [Supabase](https://supabase.com/)
 - **Estilização**: Tailwind CSS + Custom Vanilla CSS (Liquid UI)
 - **Ícones**: Lucide React
@@ -43,7 +43,7 @@ Layout otimizado para tablets e smartphones, com navegação fluida e grid adapt
 1. **Clonar o Repositório**
    ```bash
    git clone [URL_DO_REPOSITORIO]
-   cd financex
+   cd meucaixa
    ```
 
 2. **Instalar Dependências**
@@ -69,4 +69,4 @@ Layout otimizado para tablets e smartphones, com navegação fluida e grid adapt
 
 Este projeto é de uso privado para gestão de negócios.
 
-**Desenvolvido com ❤️ por Antigravity AI.**
+**Desenvolvido com ❤️ por Allan Martins.**
