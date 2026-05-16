@@ -485,6 +485,8 @@ function ClientePortalInner() {
     setAgendamentos([]);
     setLoaded(false);
     setPassword('');
+    router.replace('/');
+    router.refresh();
   }
 
   async function handleCancelAppointment(appointment: ClienteAgendamento) {

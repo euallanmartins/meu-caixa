@@ -2,6 +2,7 @@
 'use client';
 
 import React, { useEffect, useState } from 'react';
+import { useRouter } from 'next/navigation';
 import { useSidebar } from '@/hooks/useSidebar';
 import { useUserRole } from '@/hooks/useUserRole';
 import { SidebarItem } from './SidebarItem';
@@ -46,6 +47,7 @@ const BOTTOM_ITEMS = [
 ] as const;
 
 export function Sidebar() {
+  const router = useRouter();
   const { isCollapsed, toggleCollapse } = useSidebar();
   const { isAdmin, isBarbeiro, loading: roleLoading } = useUserRole();
   const [user, setUser] = useState<any>(null);
@@ -58,7 +60,8 @@ export function Sidebar() {
 
   const handleLogout = async () => {
     await supabase.auth.signOut();
-    window.location.href = '/login';
+    router.replace('/');
+    router.refresh();
   };
 
   const visibleMenuItems = isBarbeiro

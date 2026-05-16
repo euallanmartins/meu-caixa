@@ -1,10 +1,11 @@
-﻿'use client';
+'use client';
 
 import React from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import { useUserRole } from '@/hooks/useUserRole';
 import * as LucideIcons from 'lucide-react';
+import { supabase } from '@/lib/supabase';
 
 const SHARED_ITEMS = [
   { id: 'agenda',   label: 'Agenda',    icon: 'Calendar'    as const, href: '/gestao/agenda' },
@@ -33,8 +34,15 @@ const ADMIN_ITEMS = [
 
 export function BottomNav() {
   const pathname = usePathname();
+  const router = useRouter();
   const { isAdmin, isBarbeiro, loading } = useUserRole();
   const [moreOpen, setMoreOpen] = React.useState(false);
+
+  const handleLogout = async () => {
+    await supabase.auth.signOut();
+    router.replace('/');
+    router.refresh();
+  };
 
   const items = isBarbeiro
     ? BARBER_ITEMS
@@ -82,6 +90,13 @@ export function BottomNav() {
                 </Link>
               );
             })}
+            <button
+              onClick={handleLogout}
+              className="flex h-12 items-center gap-3 rounded-2xl bg-white/[0.035] px-4 text-sm font-black text-[#ff6b6b]/90 transition-all hover:bg-[#ff4d4d]/10 hover:text-[#ff6b6b] active:bg-[#ff4d4d]/15"
+            >
+              <LucideIcons.LogOut size={19} />
+              <span>Sair</span>
+            </button>
           </div>
         </div>
       )}

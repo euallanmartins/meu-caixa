@@ -721,14 +721,28 @@ export default function PlataformaAdminPage() {
               Convide proprietarios, acompanhe barbearias contratantes e controle a visibilidade no marketplace.
             </p>
           </div>
-          <button
-            type="button"
-            onClick={() => setModalOpen(true)}
-            className="flex h-13 w-full items-center justify-center gap-2 rounded-2xl bg-[#D6B47A] px-5 font-black text-black sm:w-auto"
-          >
-            <Plus className="h-5 w-5" />
-            Convidar proprietario
-          </button>
+          <div className="flex w-full flex-col gap-3 sm:w-auto sm:flex-row sm:items-center">
+            <button
+              type="button"
+              onClick={() => setModalOpen(true)}
+              className="flex h-13 w-full items-center justify-center gap-2 rounded-2xl bg-[#D6B47A] px-5 font-black text-black sm:w-auto"
+            >
+              <Plus className="h-5 w-5" />
+              Convidar proprietario
+            </button>
+            <button
+              type="button"
+              onClick={async () => {
+                await supabase.auth.signOut();
+                router.replace('/');
+                router.refresh();
+              }}
+              className="flex h-13 w-full items-center justify-center gap-2 rounded-2xl bg-white/[0.035] px-5 font-black text-[#ff6b6b] transition-all hover:bg-[#ff4d4d]/10 active:scale-[0.98] sm:w-auto"
+            >
+              <Ban className="h-4 w-4" />
+              Sair
+            </button>
+          </div>
         </header>
 
         {(error || success) && (

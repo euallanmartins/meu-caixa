@@ -44,7 +44,8 @@ export default function ConfiguracoesPage() {
 
       if (!profileData?.barbearia_id) {
         await supabase.auth.signOut();
-        router.push('/login');
+        router.replace('/');
+        router.refresh();
         return;
       }
 
