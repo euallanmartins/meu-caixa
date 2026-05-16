@@ -2,6 +2,8 @@ import { redirect } from 'next/navigation';
 import { createClient } from '@/lib/supabase/server';
 import { AgendaClient } from './AgendaClient';
 
+export const dynamic = 'force-dynamic';
+
 export default async function AgendaPage() {
   const supabase = await createClient();
   const { data: { user }, error: userError } = await supabase.auth.getUser();
