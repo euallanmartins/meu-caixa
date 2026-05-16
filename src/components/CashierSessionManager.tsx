@@ -61,7 +61,7 @@ export function CashierSessionManager({ currentSession, barbeariaId, onRefresh, 
       .update({
         status: 'fechado',
         fechado_em: new Date().toISOString(),
-        saldo_final: 0 // TODO: Calcular real se necessÃ¡rio
+        saldo_final: 0 // TODO: Calcular real se necessário
       })
       .eq('id', currentSession.id)
       .eq('barbearia_id', barbeariaId);
@@ -82,7 +82,7 @@ export function CashierSessionManager({ currentSession, barbeariaId, onRefresh, 
         </div>
         <h3 className="text-3xl font-black text-white uppercase tracking-tighter mb-4">Caixa Fechado</h3>
         <p className="text-muted text-sm font-medium leading-relaxed mb-10 max-w-md">
-          Para comeÃ§ar a realizar vendas e gerenciar o faturamento do dia, vocÃª precisa abrir o caixa informando o saldo inicial em dinheiro.
+          Para começar a realizar vendas e gerenciar o faturamento do dia, você precisa abrir o caixa informando o saldo inicial em dinheiro.
         </p>
 
         <div className="w-full max-w-sm space-y-4">
@@ -148,10 +148,10 @@ export function CashierSessionManager({ currentSession, barbeariaId, onRefresh, 
 
       <div className="liquid-glass rounded-[2rem] p-8 border border-white/10 bg-white/5 flex items-center justify-between">
          <div className="flex flex-col">
-            <span className="text-[9px] font-black uppercase tracking-[2px] text-muted mb-2 opacity-50">HistÃ³rico de Turnos</span>
+            <span className="text-[9px] font-black uppercase tracking-[2px] text-muted mb-2 opacity-50">Histórico de Turnos</span>
             <Link href="/gestao/relatorios/fluxo-caixa" className="flex items-center gap-2 text-xs font-black text-white/70 hover:text-white transition-colors">
                <History size={16} />
-               Ver RelatÃ³rios Anteriores
+               Ver Relatórios Anteriores
             </Link>
          </div>
          <ArrowRight size={20} className="text-muted opacity-30" />

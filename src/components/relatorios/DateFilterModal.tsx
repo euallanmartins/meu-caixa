@@ -1,4 +1,4 @@
-﻿'use client';
+'use client';
 
 import { useState } from 'react';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
@@ -25,10 +25,10 @@ interface DateFilterModalProps {
 type DateFilterModalContentProps = Omit<DateFilterModalProps, 'isOpen'>;
 
 const MODES: { id: DateFilterMode; label: string }[] = [
-  { id: 'mes', label: 'MÃªs' },
+  { id: 'mes', label: 'Mês' },
   { id: 'dia', label: 'Hoje' },
   { id: 'semana', label: 'Semana' },
-  { id: 'ultimo', label: 'Ãšltimos 30 dias' },
+  { id: 'ultimo', label: 'Últimos 30 dias' },
   { id: 'ano', label: 'Ano' },
   { id: 'custom', label: 'De - Para' },
 ];
@@ -85,7 +85,7 @@ function DateFilterModalContent({
         start = startOfYear(new Date(viewYear, 0));
         end = endOfYear(new Date(viewYear, 0));
         break;
-      default: // 'custom' â€” usa mÃªs selecionado como base
+      default: // 'custom' â€” usa mês selecionado como base
         start = startOfMonth(setYear(setMonth(now, selectedMonth), viewYear));
         end = endOfMonth(start);
     }
@@ -106,23 +106,24 @@ function DateFilterModalContent({
       />
 
       {/* Modal */}
-      <div className="relative w-full max-w-lg bg-[#121212] border border-white/10 rounded-[28px] overflow-hidden shadow-2xl animate-in zoom-in-95 fade-in duration-300 flex flex-col">
-
+      <div className="relative w-[calc(100vw-24px)] max-w-[420px] max-h-[85vh] bg-[#0f1115] border border-white/10 rounded-[28px] overflow-hidden shadow-2xl animate-in zoom-in-95 fade-in duration-300 flex flex-col">
+        
+        <div className="overflow-y-auto overflow-x-hidden flex-1 no-scrollbar">
         {/* Header */}
         <div className="flex items-center justify-between px-6 pt-6 pb-4 border-b border-white/5">
-          <h3 className="text-sm font-black text-white uppercase tracking-widest">Filtrar perÃ­odo</h3>
+          <h3 className="text-sm font-black text-white uppercase tracking-widest">Filtrar período</h3>
           <button onClick={onClose} className="p-2 hover:bg-white/5 rounded-full text-white/40 hover:text-white transition-colors">
             <X size={18} />
           </button>
         </div>
 
         {/* Modos em Pills */}
-        <div className="flex gap-2 flex-wrap px-6 py-4 border-b border-white/5">
+        <div className="flex gap-2 flex-wrap px-4 sm:px-6 py-4 border-b border-white/5">
           {MODES.map(mode => (
             <button
               key={mode.id}
               onClick={() => setTempMode(mode.id)}
-              className={`px-4 py-2 rounded-xl text-[11px] font-black uppercase tracking-widest transition-all ${
+              className={`px-3 sm:px-4 py-2 min-h-[44px] rounded-xl text-[10px] sm:text-[11px] font-black uppercase tracking-widest transition-all whitespace-normal sm:whitespace-nowrap ${
                 tempMode === mode.id
                   ? 'bg-accent text-black'
                   : 'bg-white/5 text-white/40 hover:text-white hover:bg-white/10'
@@ -154,12 +155,12 @@ function DateFilterModalContent({
 
         {/* Grid de Meses */}
         {needsMonthPicker && (
-          <div className="grid grid-cols-4 gap-2 p-6">
+          <div className="grid grid-cols-3 sm:grid-cols-4 gap-2 sm:gap-3 p-4 sm:p-6">
             {MONTHS.map((month, idx) => (
               <button
                 key={month}
                 onClick={() => setSelectedMonth(idx)}
-                className={`h-14 rounded-2xl border text-sm font-bold uppercase tracking-widest transition-all ${
+                className={`h-12 sm:h-14 rounded-2xl border text-[11px] sm:text-sm font-bold uppercase tracking-widest transition-all flex items-center justify-center ${
                   selectedMonth === idx
                     ? 'bg-accent border-accent text-black shadow-[0_0_16px_rgba(214,180,122,0.3)]'
                     : 'bg-white/5 border-white/5 text-white/40 hover:border-white/20 hover:text-white'
@@ -171,30 +172,32 @@ function DateFilterModalContent({
           </div>
         )}
 
-        {/* DescriÃ§Ã£o para modos simples */}
+        {/* Descrição para modos simples */}
         {!needsMonthPicker && (
           <div className="flex items-center justify-center px-6 py-10 text-white/30 text-sm font-bold">
             {tempMode === 'dia' && 'Dados de hoje'}
             {tempMode === 'semana' && 'Semana atual'}
-            {tempMode === 'ultimo' && 'Ãšltimos 30 dias a partir de hoje'}
+            {tempMode === 'ultimo' && 'Últimos 30 dias a partir de hoje'}
           </div>
         )}
 
         {/* Footer */}
-        <div className="flex items-center justify-end gap-3 px-6 py-4 border-t border-white/5">
+        <div className="sticky bottom-0 bg-[#0f1115] flex items-center justify-between sm:justify-end gap-3 px-4 sm:px-6 py-4 pb-6 sm:pb-4 border-t border-white/5 z-10">
           <button
             onClick={onClose}
-            className="px-6 py-3 rounded-2xl text-xs font-black uppercase tracking-widest text-white/40 hover:text-white hover:bg-white/5 transition-all"
+            className="flex-1 sm:flex-none px-4 sm:px-6 py-3 min-h-[44px] rounded-2xl text-[11px] font-black uppercase tracking-widest text-white/40 hover:text-white hover:bg-white/5 transition-all text-center"
           >
             Cancelar
           </button>
           <button
             onClick={handleApply}
-            className="px-8 py-3 bg-white text-black rounded-2xl text-xs font-black uppercase tracking-widest hover:scale-105 transition-all active:scale-95"
+            className="flex-1 sm:flex-none px-6 sm:px-8 py-3 min-h-[44px] bg-white text-black rounded-2xl text-[11px] font-black uppercase tracking-widest hover:scale-105 transition-all active:scale-95 text-center"
           >
             Aplicar
           </button>
         </div>
+        
+        </div> {/* Fim do overflow */}
       </div>
     </div>
   );

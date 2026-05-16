@@ -102,7 +102,28 @@ export function CheckoutPOS({
         ...(produtosRes.data?.map(p => ({ ...p, valor: Number(p.valor_venda || 0), tipo: 'produto' as const })) || []),
       ];
 
-      setItems(combined);
+      const uniqueItemsMap = new Map<string, Item>();
+      const namePriceMap = new Map<string, Item[]>();
+
+      combined.forEach(item => {
+        const uniqueKey = `${item.tipo}-${item.id}`;
+        if (!uniqueItemsMap.has(uniqueKey)) {
+          uniqueItemsMap.set(uniqueKey, item);
+        }
+
+        const namePriceKey = `${item.tipo}-${item.nome.trim().toLowerCase()}-${item.valor}`;
+        const existingList = namePriceMap.get(namePriceKey) || [];
+        existingList.push(item);
+        namePriceMap.set(namePriceKey, existingList);
+      });
+
+      namePriceMap.forEach((itemsList, key) => {
+        if (itemsList.length > 1) {
+          console.warn(`[PDV] Possivel duplicacao real no banco detectada para o item: "${itemsList[0].nome}". IDs encontrados: ${itemsList.map(i => i.id).join(', ')}`);
+        }
+      });
+
+      setItems(Array.from(uniqueItemsMap.values()));
       setBarbers(barbeirosRes.data || []);
       setCurrentSession(sessaoRes.data || null);
       const cashIncomes = (transacoesDiaRes.data || []).reduce((acc: number, transaction: any) => {
@@ -279,7 +300,7 @@ export function CheckoutPOS({
   }
 
   return (
-    <div className="relative min-h-[calc(100dvh-150px)] pb-16">
+    <div className="relative min-h-[calc(100dvh-150px)] pb-28">
       <div className="mb-6 space-y-4 lg:hidden">
         <div className="grid grid-cols-2 gap-2 rounded-2xl border border-white/10 bg-white/[0.04] p-1">
           <button
@@ -309,38 +330,6 @@ export function CheckoutPOS({
               </span>
             )}
           </button>
-        </div>
-
-        <div className="flex items-center justify-between">
-        <button
-          type="button"
-          onClick={() => setMobileView('catalog')}
-          className="flex h-14 w-14 items-center justify-center rounded-2xl border border-white/10 bg-white/[0.04] text-[#D6B47A]"
-          aria-label="Ver itens"
-        >
-          {mobileView === 'cart' ? <ArrowRight className="h-6 w-6 rotate-180" /> : <ShoppingCart className="h-7 w-7" />}
-        </button>
-        <div className="min-w-0 flex-1 px-4">
-          <h2 className="text-2xl font-black uppercase leading-none text-white">
-            {mobileView === 'cart' ? 'Carrinho' : 'Terminal PDV'}
-          </h2>
-          <p className="mt-2 text-[11px] font-black uppercase tracking-[0.2em] text-white/45">
-            {mobileView === 'cart' ? `${cart.length} itens selecionados` : 'Venda rapida e checkout profissional'}
-          </p>
-        </div>
-        <button
-          type="button"
-          onClick={() => setMobileView(mobileView === 'cart' ? 'catalog' : 'cart')}
-          className="relative flex h-12 items-center justify-center gap-2 rounded-2xl border border-white/10 bg-white/[0.04] px-4 text-xs font-black uppercase tracking-[0.12em] text-white/75"
-          aria-label={mobileView === 'cart' ? 'Voltar aos itens' : 'Abrir carrinho'}
-        >
-          {mobileView === 'cart' ? 'Itens' : 'Carrinho'}
-          {cart.length > 0 && (
-            <span className="absolute -right-1 -top-1 rounded-full bg-[#D6B47A] px-1.5 py-0.5 text-[10px] font-black text-black">
-              {cart.length}
-            </span>
-          )}
-        </button>
         </div>
       </div>
 
@@ -374,54 +363,60 @@ export function CheckoutPOS({
       <div className="grid min-w-0 gap-6 xl:grid-cols-[minmax(0,1fr)_minmax(320px,420px)]">
         <section className={`${mobileView === 'catalog' ? 'block' : 'hidden'} space-y-4 xl:block`}>
           {loading ? (
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              {Array.from({ length: 12 }).map((_, i) => <div key={i} className="h-40 rounded-2xl bg-white/5 animate-pulse" />)}
+            <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+              {Array.from({ length: 12 }).map((_, i) => <div key={i} className="h-[90px] rounded-2xl bg-white/5 animate-pulse" />)}
             </div>
           ) : (
-            <div className="grid gap-4 sm:grid-cols-2 xl:grid-cols-4">
-              {filteredItems.map(item => (
-                <button
-                  key={`${item.tipo}-${item.id}`}
-                  type="button"
-                  onClick={() => addToCart(item)}
-                  className="group relative flex min-h-[162px] flex-col justify-between rounded-2xl border border-white/10 bg-white/[0.035] p-5 text-left transition-all hover:-translate-y-0.5 hover:border-[#D6B47A]/35 hover:bg-white/[0.055] lg:min-h-[156px]"
-                >
-                  <Bookmark className="absolute right-5 top-5 h-5 w-5 text-white/35 lg:hidden" />
-                  <div>
-                    <div className="mb-4 flex h-10 w-10 items-center justify-center rounded-xl bg-[#D6B47A]/12 text-[#D6B47A] shadow-lg shadow-[#D6B47A]/10">
-                      {item.tipo === 'servico' ? <Scissors className="h-5 w-5" /> : <Package className="h-5 w-5" />}
-                    </div>
-                    <h3 className="line-clamp-2 text-lg font-black text-white">{item.nome}</h3>
-                    <p className="mt-2 text-[11px] font-black uppercase tracking-[0.14em] text-white/45">
-                      {item.tipo === 'servico' ? 'Servico profissional' : 'Produto'}
-                    </p>
+            <div className="space-y-4">
+              <div className="flex min-w-0 flex-col gap-3 rounded-2xl border border-[#D6B47A]/15 bg-[#D6B47A]/5 p-3 sm:flex-row sm:items-center sm:justify-between">
+                <div className="flex min-w-0 items-center gap-3">
+                  <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-[14px] bg-[#D6B47A]/10 text-[#D6B47A]">
+                    <Package className="h-5 w-5" />
                   </div>
-                  <p className="mt-5 text-lg font-black text-[#D6B47A]">
-                    {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(item.valor || 0))}
-                  </p>
-                  <span className="absolute bottom-5 right-5 flex h-12 w-12 items-center justify-center rounded-full bg-[#D6B47A]/10 text-[#D6B47A] lg:hidden">
-                    <Plus className="h-6 w-6" />
-                  </span>
+                  <div className="min-w-0">
+                    <p className="font-black text-white text-[13px] uppercase tracking-wider">Pacotes e combos</p>
+                    <p className="truncate text-xs text-white/55">Aumente o ticket médio com pacotes exclusivos.</p>
+                  </div>
+                </div>
+                <button type="button" onClick={() => { setActiveCategory('servico'); setSearchTerm('combo'); }} className="flex h-10 items-center justify-center rounded-xl border border-[#D6B47A]/20 bg-[#D6B47A]/10 px-4 text-xs font-black uppercase text-[#D6B47A] transition-all hover:bg-[#D6B47A]/20 sm:w-auto">
+                  Ver pacotes
+                  <ArrowRight className="ml-2 h-4 w-4" />
                 </button>
-              ))}
+              </div>
+
+              <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-3">
+                {filteredItems.map(item => (
+                  <div
+                    key={`${item.tipo}-${item.id}`}
+                    className="group relative flex items-center justify-between rounded-2xl border border-white/10 bg-white/[0.035] p-3 text-left transition-all hover:-translate-y-0.5 hover:border-[#D6B47A]/35 hover:bg-white/[0.055]"
+                  >
+                    <div className="flex min-w-0 flex-1 items-center gap-4">
+                      <div className="flex h-12 w-12 shrink-0 items-center justify-center rounded-[14px] bg-[#D6B47A]/12 text-[#D6B47A] shadow-lg shadow-[#D6B47A]/10">
+                        {item.tipo === 'servico' ? <Scissors className="h-5 w-5" /> : <Package className="h-5 w-5" />}
+                      </div>
+                      <div className="min-w-0 pr-2">
+                        <h3 className="truncate text-[15px] font-black text-white">{item.nome}</h3>
+                        <div className="mt-0.5 flex items-center gap-2 text-[11px] font-bold uppercase tracking-[0.14em]">
+                          <span className="text-[#D6B47A]">
+                            {new Intl.NumberFormat('pt-BR', { style: 'currency', currency: 'BRL' }).format(Number(item.valor || 0))}
+                          </span>
+                          <span className="text-white/30">•</span>
+                          <span className="text-white/45">{item.tipo === 'servico' ? 'Servico' : 'Produto'}</span>
+                        </div>
+                      </div>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => addToCart(item)}
+                      className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl bg-white/[0.06] text-white/70 transition-all hover:bg-[#D6B47A] hover:text-black"
+                    >
+                      <Plus className="h-5 w-5" />
+                    </button>
+                  </div>
+                ))}
+              </div>
             </div>
           )}
-
-          <div className="flex min-w-0 flex-col gap-4 rounded-2xl border border-white/10 bg-white/[0.035] p-4 sm:flex-row sm:items-center sm:justify-between">
-            <div className="flex min-w-0 items-center gap-4">
-              <div className="flex h-11 w-11 items-center justify-center rounded-xl bg-[#D6B47A]/10 text-[#D6B47A]">
-                <Package className="h-5 w-5" />
-              </div>
-              <div className="min-w-0">
-                <p className="font-black text-white">Pacotes e combos</p>
-                <p className="break-words text-sm text-white/55">Aumente o ticket medio com pacotes exclusivos.</p>
-              </div>
-            </div>
-            <button type="button" onClick={() => { setActiveCategory('servico'); setSearchTerm('combo'); }} className="hidden rounded-xl border border-white/10 px-4 py-3 text-sm font-black text-white transition-all hover:bg-white/[0.06] sm:flex">
-              Ver pacotes
-              <ArrowRight className="ml-3 h-4 w-4" />
-            </button>
-          </div>
         </section>
 
         <aside className={`${mobileView === 'cart' ? 'block' : 'hidden'} min-w-0 overflow-hidden rounded-3xl border border-white/10 bg-white/[0.035] xl:sticky xl:top-6 xl:block`}>

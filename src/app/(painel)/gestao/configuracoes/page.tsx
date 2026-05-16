@@ -63,7 +63,7 @@ export default function ConfiguracoesPage() {
   );
 
   return (
-    <div className="space-y-8 animate-in fade-in duration-500">
+    <div className="min-w-0 space-y-8 pb-28 animate-in fade-in duration-500">
       <ProfessionalMobileHeader
         icon={Settings}
         title="Ajustes"
@@ -77,13 +77,13 @@ export default function ConfiguracoesPage() {
         </p>
       </div>
 
-      <div className="flex gap-4 overflow-x-auto border-b border-white/10 pb-4">
+      <div className="flex w-full max-w-full gap-4 overflow-x-auto border-b border-white/10 pb-4 no-scrollbar">
         {tabs.map(tab => (
           <button
             key={tab.id}
             type="button"
             onClick={() => setActiveTab(tab.id)}
-            className={`whitespace-nowrap rounded-2xl px-6 py-3 text-[10px] font-black uppercase tracking-widest transition-all ${
+            className={`shrink-0 whitespace-nowrap rounded-2xl px-6 py-3 text-[10px] font-black uppercase tracking-widest transition-all ${
               activeTab === tab.id
                 ? 'border border-[#D6B47A]/30 bg-[#D6B47A]/10 text-[#D6B47A]'
                 : 'bg-white/5 text-white hover:bg-white/10'

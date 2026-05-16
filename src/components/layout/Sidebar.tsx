@@ -32,9 +32,10 @@ const ADMIN_ITEMS = [
   { id: 'financeiro', label: 'Financeiro', icon: 'TrendingUp', href: '/gestao/financeiro', testId: 'nav-financeiro' },
   { id: 'equipe',     label: 'Equipe',     icon: 'UserCheck',  href: '/gestao/equipe',     testId: 'nav-equipe' },
   { id: 'lista-espera', label: 'Lista de espera', icon: 'CalendarClock', href: '/gestao/lista-espera', testId: 'nav-lista-espera' },
-  { id: 'marketing', label: 'Marketing', icon: 'Megaphone', href: '/gestao/marketing', testId: 'nav-marketing' },
-  { id: 'promocoes', label: 'Promoções', icon: 'BadgePercent', href: '/gestao/promocoes', testId: 'nav-promocoes' },
-  { id: 'formularios', label: 'Formularios', icon: 'FileText', href: '/gestao/formularios', testId: 'nav-formularios' },
+  // Ocultados temporariamente até ativação da feature
+  // { id: 'marketing', label: 'Marketing', icon: 'Megaphone', href: '/gestao/marketing', testId: 'nav-marketing' },
+  // { id: 'promocoes', label: 'Promoções', icon: 'BadgePercent', href: '/gestao/promocoes', testId: 'nav-promocoes' },
+  // { id: 'formularios', label: 'Formularios', icon: 'FileText', href: '/gestao/formularios', testId: 'nav-formularios' },
   { id: 'avaliacoes', label: 'Avaliacoes', icon: 'MessageSquareText', href: '/gestao/avaliacoes', testId: 'nav-avaliacoes' },
   { id: 'relatorios', label: 'Relatórios', icon: 'BarChart2',  href: '/gestao/relatorios', testId: 'nav-relatorios' },
 ] as const;

@@ -26,9 +26,10 @@ const ADMIN_ITEMS = [
   { id: 'equipe',     label: 'Equipe',     icon: 'UserCheck'    as const, href: '/gestao/equipe' },
   { id: 'onboarding', label: 'Onboard',    icon: 'Rocket'       as const, href: '/gestao/onboarding' },
   { id: 'lista-espera', label: 'Espera',    icon: 'CalendarClock' as const, href: '/gestao/lista-espera' },
-  { id: 'marketing', label: 'Market.',      icon: 'Megaphone'    as const, href: '/gestao/marketing' },
-  { id: 'promocoes', label: 'Promo.',       icon: 'BadgePercent' as const, href: '/gestao/promocoes' },
-  { id: 'formularios', label: 'Forms',      icon: 'FileText'     as const, href: '/gestao/formularios' },
+  // Ocultados temporariamente até ativação da feature
+  // { id: 'marketing', label: 'Market.',      icon: 'Megaphone'    as const, href: '/gestao/marketing' },
+  // { id: 'promocoes', label: 'Promo.',       icon: 'BadgePercent' as const, href: '/gestao/promocoes' },
+  // { id: 'formularios', label: 'Forms',      icon: 'FileText'     as const, href: '/gestao/formularios' },
   { id: 'links', label: 'Links',            icon: 'Link2'        as const, href: '/gestao/configuracoes/links' },
 ];
 
