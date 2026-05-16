@@ -2,7 +2,7 @@
   "expo": {
     "name": "Meu Caixa",
     "slug": "meu-caixa-mobile",
-    "version": "1.0.2",
+    "version": "1.0.3",
     "orientation": "portrait",
     "scheme": "meucaixa",
     "userInterfaceStyle": "dark",
@@ -35,7 +35,7 @@
     "ios": {
       "supportsTablet": false,
       "bundleIdentifier": "com.meucaixa.app",
-      "buildNumber": "3",
+      "buildNumber": "4",
       "associatedDomains": [
         "applinks:meu-caixa-indol.vercel.app"
       ],
@@ -48,7 +48,7 @@
     },
     "android": {
       "package": "com.meucaixa.app",
-      "versionCode": 3,
+      "versionCode": 4,
       "permissions": [
         "INTERNET",
         "CAMERA",
